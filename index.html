@@ -1238,6 +1238,58 @@
 
     
 
+
+    /* v10.1: 共有/削除ボタンを極限まで小型化 */
+    .project-action-btn {
+      font-size: 9px !important;
+      padding: 0 6px !important;
+      min-width: 34px !important;
+      height: 18px !important;
+      line-height: 18px !important;
+      border-radius: 999px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+
+    .project-share-btn {
+      top: 8px !important;
+      right: 8px !important;
+    }
+
+    .project-delete-btn-inline {
+      right: 8px !important;
+      bottom: 8px !important;
+    }
+
+    .project-card .project-btn {
+      padding-right: 56px !important;
+    }
+
+    @media (max-width: 640px) {
+      .project-action-btn {
+        font-size: 8px !important;
+        padding: 0 5px !important;
+        min-width: 30px !important;
+        height: 16px !important;
+        line-height: 16px !important;
+      }
+
+      .project-share-btn {
+        top: 6px !important;
+        right: 6px !important;
+      }
+
+      .project-delete-btn-inline {
+        right: 6px !important;
+        bottom: 6px !important;
+      }
+
+      .project-card .project-btn {
+        padding-right: 46px !important;
+      }
+    }
+
   </style>
 </head>
 <body>
