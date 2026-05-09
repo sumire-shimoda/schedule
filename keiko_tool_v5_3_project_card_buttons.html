@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>劇団調整ポータル Pro - シーン自動判定付</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <style>
+    :root {
+      --main: #2563EB;
+      --main-dark: #1D4ED8;
+      --bg: #F6F8FB;
+      --white: #ffffff;
+      --border: #D7DDE6;
+      --border-soft: #E6EAF0;
+      --text: #111827;
+      --muted: #6B7280;
+      --muted-light: #9CA3AF;
+      --blue-soft: #EFF6FF;
+      --blue-border: #BFDBFE;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      margin: 0;
+      padding: 0 20px 20px;
+      color: var(--text);
+    }
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: #ffffff;
+      border-bottom: none;
+      margin: 0 -20px 20px;
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06);
+    }
+    .site-header-inner {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 16px 20px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .site-title {
+      font-weight: 800;
+      color: #111827;
+      cursor: pointer;
+      font-size: 18px;
+      letter-spacing: .01em;
+    }
+    .site-subtitle, .muted-text {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .container { max-width: 1000px; margin: 0 auto; }
+    .card {
+      background: var(--white);
+      padding: 20px;
+      border-radius: 18px;
+      box-shadow: none;
+      border: none;
+      margin-bottom: 20px;
+    }
+    h1, h2, h3, h4, strong { color: var(--text); }
+    p, small { color: var(--muted); }
+    .page { display: none; }
+    .active { display: block; }
+    input, select, textarea {
+      border: 1px solid var(--border) !important;
+      border-radius: 999px !important;
+      color: var(--text);
+      background: #ffffff;
+      outline: none;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: #AFC3E8 !important;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, .08);
+    }
+    input[type="time"] {
+      padding: 6px 10px;
+      border: 1px solid var(--border) !important;
+      border-radius: 999px !important;
+    }
+    .btn {
+      padding: 10px 20px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      font-weight: 700;
+      transition: 0.2s;
+    }
+    .btn:hover { filter: brightness(.97); }
+    .btn-main { background: var(--main); color: white; width: 100%; }
+    .btn-sub { background: var(--main); color: white; }
+    .btn-danger { background: #EEF2F7; color: #374151; padding: 4px 10px; font-size: 12px; }
+    .btn-danger-wide { background:#EEF2F7; color:#374151; margin-left:8px; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+    .tab {
+      flex: 1;
+      text-align: center;
+      padding: 12px;
+      background: #E9EEF5;
+      color: var(--muted);
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .tab.active { background: var(--main); color: white; }
+    .proposal-box {
+      background: var(--white);
+      border: none;
+      border-radius: 22px;
+      padding: 18px;
+      margin-bottom: 20px;
+      box-shadow: none;
+    }
+    .proposal-box h3 { color: var(--text) !important; }
+    .proposal-box p { color: var(--muted) !important; }
+    .proposal-item {
+      background: white;
+      padding: 13px 14px;
+      border-radius: 16px;
+      margin-top: 10px;
+      border: none;
+      border-left: none;
+      box-shadow: none;
+    }
+    .ok-badge {
+      background: var(--blue-soft);
+      color: var(--main-dark);
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      border: none;
+    }
+    .date-item { border-bottom: none; padding: 15px 0; }
+    .chip {
+      background: #F8FAFC;
+      color: var(--text);
+      padding: 6px 11px;
+      border-radius: 999px;
+      display: inline-block;
+      margin: 3px;
+      font-size: 13px;
+      border: 1px solid var(--border-soft);
+    }
+    .status-selector { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+    .time-input-group {
+      margin-top: 10px;
+      background: #F8FAFC;
+      padding: 10px;
+      border-radius: 18px;
+      display: none;
+      color: var(--muted);
+    }
+    table.cross-table { border-collapse: collapse; width: 100%; min-width: 650px; background: white; }
+    .table-wrap { overflow-x: auto; border: none; border-radius: 16px; }
+    .cross-table th, .cross-table td { border: none; padding: 8px; text-align: center; vertical-align: middle; font-size: 13px; }
+    .cross-table th { background: #F8FAFC; position: sticky; top: 0; color: var(--text); }
+    .cross-table td:first-child, .cross-table th:first-child { text-align: left; font-weight: bold; background: #F8FAFC; position: sticky; left: 0; z-index: 1; color: var(--text); }
+    .mark-ok, .mark-ng, .mark-mid { color: var(--text); font-weight: bold; }
+    .small-note { font-size: 11px; color: var(--muted); display: block; margin-top: 2px; }
+    #loading-overlay { position: fixed; inset: 0; background: rgba(17, 24, 39, 0.35); display: none; align-items: center; justify-content: center; z-index: 9999; pointer-events: all; }
+    #loading-overlay.active { display: flex; }
+    .loader-card { background: white; padding: 24px 32px; border-radius: 22px; box-shadow: none; border: none; font-weight: bold; text-align: center; color: var(--text); }
+    .spinner { width: 28px; height: 28px; border: 4px solid #CBD5E1; border-top-color: var(--main); border-radius: 50%; animation: spin .8s linear infinite; margin: 0 auto 10px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .chip {
+      border: none !important;
+      padding: 6px 12px;
+    }
+    .chip .chip-delete {
+      background: transparent !important;
+      color: var(--muted);
+      border: none !important;
+      padding: 0 0 0 6px !important;
+      margin: 0;
+      font-size: 14px;
+      line-height: 1;
+      font-weight: 700;
+      cursor: pointer;
+      border-radius: 0;
+    }
+    .chip .chip-delete:hover {
+      color: var(--text);
+      filter: none;
+    }
+    input, select, textarea {
+      padding-left: 16px !important;
+    }
+    input::placeholder, textarea::placeholder {
+      color: var(--muted-light);
+      padding-left: 4px;
+    }
+    .scene-box {
+      border: none;
+      background: #F8FAFC;
+      padding: 12px 10px 12px 24px;
+      margin-bottom: 5px;
+      border-radius: 999px;
+    }
+    .scene-members {
+      padding-left: 8px;
+      margin-top: 4px;
+    }
+
+    .scene-box {
+      border-radius: 18px !important;
+      padding: 14px 14px 14px 24px !important;
+    }
+    .scene-head {
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      align-items:center;
+      padding-right: 4px;
+    }
+    .scene-title-row {
+      display:flex;
+      align-items:center;
+      gap:8px;
+      min-width: 0;
+    }
+    .scene-order-controls {
+      display:inline-flex;
+      gap:4px;
+      align-items:center;
+    }
+    .icon-btn {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-weight: 800;
+      padding: 2px 5px;
+      font-size: 14px;
+      line-height: 1;
+      border-radius: 999px;
+    }
+    .icon-btn:hover {
+      color: var(--text);
+      background: #EEF2F7;
+      filter: none;
+    }
+    .member-toggle-list {
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
+      padding-left: 8px;
+      margin-top: 8px;
+    }
+    .toggle-btn {
+      border: none;
+      background: #EEF2F7;
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: .15s;
+    }
+    .toggle-btn.active {
+      background: var(--main);
+      color: white;
+    }
+    .attendance-buttons {
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top: 10px;
+    }
+    .attendance-btn {
+      border: none;
+      background: #EEF2F7;
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 9px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: .15s;
+    }
+    .attendance-btn.active {
+      background: var(--main);
+      color: white;
+    }
+    .time-label {
+      display:block;
+      padding-left: 10px;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .time-input-group .small-note {
+      padding-left: 10px;
+      margin-top: 6px;
+    }
+
+    .drag-handle {
+      width: 26px;
+      height: 26px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: grab;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      border-radius: 999px;
+    }
+    .drag-handle:active {
+      cursor: grabbing;
+    }
+    .hamburger-lines,
+    .hamburger-lines::before,
+    .hamburger-lines::after {
+      display: block;
+      width: 15px;
+      height: 2px;
+      background: currentColor;
+      border-radius: 999px;
+      content: "";
+    }
+    .hamburger-lines {
+      position: relative;
+    }
+    .hamburger-lines::before {
+      position: absolute;
+      top: -5px;
+      left: 0;
+    }
+    .hamburger-lines::after {
+      position: absolute;
+      top: 5px;
+      left: 0;
+    }
+    .scene-box.dragging {
+      opacity: .55;
+    }
+    .toggle-btn {
+      background: var(--bg) !important;
+      border: 1px solid #E1E6EE !important;
+      color: var(--muted) !important;
+    }
+    .toggle-btn.active {
+      background: var(--main) !important;
+      border-color: var(--main) !important;
+      color: white !important;
+    }
+
+
+    /* v4.6: シーン並び替えハンドル・削除ボタンの位置調整 */
+    .scene-box {
+      position: relative;
+      padding-left: 40px !important;
+      padding-right: 38px !important;
+    }
+    .scene-head {
+      position: static !important;
+      padding-right: 0 !important;
+    }
+    .scene-title-row {
+      padding-left: 0 !important;
+      gap: 6px !important;
+    }
+    .drag-handle {
+      position: absolute !important;
+      left: 12px !important;
+      top: 50% !important;
+      transform: translateY(-50%) !important;
+      width: 16px !important;
+      height: 20px !important;
+      color: var(--muted-light) !important;
+    }
+    .hamburger-lines,
+    .hamburger-lines::before,
+    .hamburger-lines::after {
+      width: 10px !important;
+      height: 1.2px !important;
+    }
+    .hamburger-lines::before {
+      top: -3.6px !important;
+    }
+    .hamburger-lines::after {
+      top: 3.6px !important;
+    }
+    .scene-head > .icon-btn {
+      position: absolute !important;
+      right: 12px !important;
+      top: 50% !important;
+      transform: translateY(-50%) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      width: 20px !important;
+      height: 20px !important;
+      padding: 0 !important;
+    }
+
+
+    /* v4.8: シーンカードの縦方向ドラッグ */
+    #admin-scene-list {
+      position: relative;
+    }
+    .scene-box {
+      transition: transform .18s ease, box-shadow .18s ease, margin .18s ease;
+      user-select: none;
+      touch-action: none;
+    }
+    .scene-box.scene-dragging {
+      transform: scale(1.018) !important;
+      box-shadow: 0 14px 30px rgba(15, 23, 42, 0.14) !important;
+      opacity: 1 !important;
+      z-index: 3000 !important;
+      pointer-events: none;
+    }
+    .scene-drag-placeholder {
+      background: transparent;
+      border-radius: 18px;
+      transition: height .18s ease, margin .18s ease;
+      margin-bottom: 5px;
+    }
+    .drag-handle {
+      touch-action: none;
+    }
+
+
+    /* v4.9: 拡大なし・前面表示・半分重なったら入れ替え */
+    .scene-box.scene-dragging {
+      transform: none !important;
+      box-shadow: 0 14px 30px rgba(15, 23, 42, 0.14) !important;
+      opacity: 1 !important;
+      z-index: 3000 !important;
+      pointer-events: none;
+    }
+
+
+    /* v5.0: 入れ替え時の滑らかな移動・削除ボタン操作安定化 */
+    .scene-box {
+      will-change: transform;
+    }
+    .scene-box.scene-dragging {
+      transform: none !important;
+      box-shadow: 0 14px 30px rgba(15, 23, 42, 0.14) !important;
+      opacity: 1 !important;
+      z-index: 5000 !important;
+      pointer-events: none !important;
+    }
+    .scene-head > .icon-btn {
+      pointer-events: auto !important;
+      z-index: 20 !important;
+    }
+
+
+    /* v5.2: ドラッグ中の周辺カードをtransformで滑らかに移動 */
+    .scene-box {
+      transition: transform .18s cubic-bezier(.2, .8, .2, 1), box-shadow .18s ease !important;
+    }
+    .scene-box.shift-up {
+      transform: translateY(calc(-1 * var(--drag-gap, 0px)));
+    }
+    .scene-box.shift-down {
+      transform: translateY(var(--drag-gap, 0px));
+    }
+
+
+    /* v5.3: 既存の稽古予定ボタンを大きめ長方形カードに */
+    .project-list-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 8px;
+    }
+    .project-card {
+      display: flex;
+      align-items: stretch;
+      gap: 8px;
+      min-height: 92px;
+    }
+    .project-card .project-btn {
+      flex: 1;
+      min-height: 92px;
+      border-radius: 18px;
+      text-align: left;
+      padding: 18px 20px;
+      font-size: 15px;
+      line-height: 1.4;
+    }
+    .project-card .project-delete-btn {
+      align-self: stretch;
+      border-radius: 18px;
+      padding: 0 14px;
+      min-width: 54px;
+    }
+    @media (max-width: 640px) {
+      .project-list-grid {
+        grid-template-columns: 1fr;
+      }
+      .project-card,
+      .project-card .project-btn {
+        min-height: 86px;
+      }
+    }
+
+  </style>
+</head>
+<body>
+<header class="site-header"><div class="site-header-inner"><div onclick="goHome()" title="プロジェクト選択へ戻る" style="cursor:pointer;"><div class="site-title">劇団スケジュール管理</div></div></div></header>
+<div id="loading-overlay"><div class="loader-card"><div class="spinner"></div><div id="loading-text">通信中...</div></div></div>
+
+<div class="container">
+  <h1 id="project-title" style="display:none; font-size:1.08rem; color:#4B5563; font-weight:600; margin:0 0 16px;"></h1>
+
+  <div id="page-select" class="page active">
+    <div class="card">
+      <p style="margin-top:0; color:var(--muted); line-height:1.7;">新しく管理したい稽古の予定を入力してください。</p>
+      <div style="display:flex; gap:10px; align-items:center; margin-bottom:22px;">
+        <input type="text" id="new-project-name" placeholder="例：5月の稽古" style="flex:1; padding:10px; border-radius:999px; border:1px solid var(--border);">
+        <button class="btn btn-sub" onclick="initProject()">作成</button>
+      </div>
+
+      <div style="border-top:none; padding-top:18px;">
+        <p style="margin:0 0 10px; color:var(--muted); font-size:0.9rem;">既存の稽古予定を選ぶ</p>
+        <div id="project-list">読み込み中...</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="page-main" class="page">
+    <div class="tabs">
+      <div id="tab-member" class="tab active" onclick="switchTab('member')">役者：回答</div>
+      <div id="tab-admin" class="tab" onclick="switchTab('admin')">演出：管理</div>
+    </div>
+
+    <div id="view-admin" style="display:none;">
+      <div class="proposal-box">
+        <h3 style="margin-top:0; color: var(--text);">稽古可能なシーンの提案</h3>
+        <p style="font-size: 0.85rem; color: var(--muted);">途中参加・途中帰宅がある場合は、全員が重なる時間も表示します。</p>
+        <div id="proposal-list">回答を読み込み中...</div>
+      </div>
+
+      <div class="card">
+        <h3>出欠表</h3>
+        <div id="attendance-cross-table"></div>
+      </div>
+
+      <div class="card">
+        <h3>1. 役者の登録</h3>
+        <div style="display:flex; gap:10px;">
+          <input type="text" id="cast-name" style="flex:1; padding:8px;" placeholder="役者名">
+          <button class="btn btn-sub" onclick="addCast()">追加</button>
+        </div>
+        <div id="admin-cast-list" style="margin-top:10px;"></div>
+      </div>
+
+      <div class="card">
+        <h3>2. シーンの登録</h3>
+        <div style="display:flex; gap:10px;">
+          <input type="text" id="scene-name" style="flex:1; padding:8px;" placeholder="シーン名（例：シーン１）">
+          <button class="btn btn-sub" onclick="addScene()">シーン追加</button>
+        </div>
+        <div id="admin-scene-list" style="margin-top:10px;"></div>
+      </div>
+
+      <div class="card">
+        <h3>3. 稽古日程の追加</h3>
+        <input type="text" id="date-picker" placeholder="日程を複数選択できます" style="width:100%; padding:8px; box-sizing:border-box;">
+        <div style="margin-top:10px;">
+          開始：<input type="time" id="start-time" value="18:00"> 〜
+          終了：<input type="time" id="end-time" value="22:00">
+          <button class="btn btn-sub" onclick="addSchedule()">選択した日程を追加</button>
+        </div>
+        <div id="admin-schedule-list" style="margin-top:10px;"></div>
+      </div>
+      <button class="btn btn-main" style="padding:15px; font-size:1.1rem;" onclick="saveAllSettings()">設定を保存</button>
+    </div>
+
+    <div id="view-member">
+      <div class="card">
+        <h3>名前を選択</h3>
+        <select id="member-select" style="width:100%; padding:10px;"></select>
+      </div>
+      <div class="card">
+        <h3>出欠回答</h3>
+        <div id="member-schedule-list"></div>
+        <button class="btn btn-main" style="margin-top:20px;" onclick="submitAttendance()">回答を送信</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+  const GAS_URL = "あなたのGAS URL";
+  let currentProject = "";
+  let appData = { cast: [], scenes: [], schedules: [] };
+  let responses = [];
+
+  flatpickr("#date-picker", { mode: "multiple", dateFormat: "m/d" });
+
+  function setLoading(isLoading, text = "通信中...") {
+    document.getElementById('loading-text').innerText = text;
+    document.getElementById('loading-overlay').classList.toggle('active', isLoading);
+  }
+
+  function escapeHtml(str) {
+    return String(str ?? "").replace(/[&<>'"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m]));
+  }
+
+  function jsString(str) {
+    return JSON.stringify(String(str ?? ""));
+  }
+
+  async function apiFetch(url, options) {
+    setLoading(true);
+    try {
+      const res = await fetch(url, options);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function timeToMin(t) {
+    if (!t) return null;
+    const [h, m] = String(t).split(':').map(Number);
+    if (Number.isNaN(h) || Number.isNaN(m)) return null;
+    return h * 60 + m;
+  }
+
+  function minToTime(min) {
+    const h = Math.floor(min / 60).toString().padStart(2, '0');
+    const m = (min % 60).toString().padStart(2, '0');
+    return `${h}:${m}`;
+  }
+
+  function parseAnswer(answer, sched) {
+    const raw = String(answer || "");
+    if (!raw) return { status: "未回答", start: null, end: null, label: "未回答" };
+    if (raw.includes("不参加")) return { status: "不参加", start: null, end: null, label: "×" };
+    if (raw.includes("参加") && !raw.includes("途中")) {
+      return { status: "参加", start: timeToMin(sched.start), end: timeToMin(sched.end), label: "◯" };
+    }
+    if (raw.includes("途中")) {
+      const match = raw.match(/途中\((\d{2}:\d{2})〜(\d{2}:\d{2})\)/);
+      if (match) {
+        return { status: "途中", start: timeToMin(match[1]), end: timeToMin(match[2]), label: "△", detail: `${match[1]}〜${match[2]}` };
+      }
+      return { status: "途中", start: timeToMin(sched.start), end: timeToMin(sched.end), label: "△", detail: raw };
+    }
+    return { status: raw, start: null, end: null, label: raw };
+  }
+
+  function getLatestResponse(name) {
+    return responses.find(res => res.name === name);
+  }
+
+  function goHome() {
+    currentProject = "";
+    appData = { cast: [], scenes: [], schedules: [] };
+    responses = [];
+    document.getElementById('project-title').style.display = "none";
+    document.getElementById('project-title').innerText = "";
+    document.getElementById('page-main').classList.remove('active');
+    document.getElementById('page-select').classList.add('active');
+    loadProjects();
+  }
+
+  async function deleteProject(name) {
+    if (!confirm(`プロジェクト「${name}」を削除します。スプレッドシート上のシートも消えます。本当に削除しますか？`)) return;
+    try {
+      await apiFetch(GAS_URL, { method: "POST", body: JSON.stringify({ type: "deleteProject", projectName: name }) });
+      if (currentProject === name) goHome();
+      else await loadProjects();
+      alert("プロジェクトを削除しました。");
+    } catch (err) {
+      alert('削除に失敗しました: ' + err.message);
+    }
+  }
+
+  async function loadProjects() {
+    try {
+      const data = await apiFetch(GAS_URL);
+      const projects = data.existingProjects || [];
+      document.getElementById('project-list').innerHTML = projects.length
+        ? `<div class="project-list-grid">${projects.map(p => `<div class="project-card"><button class="btn btn-sub project-btn" data-project="${escapeHtml(p)}">${escapeHtml(p)}</button><button class="btn btn-danger project-delete-btn" data-project="${escapeHtml(p)}">削除</button></div>`).join('')}</div>`
+        : 'まだプロジェクトがありません。';
+      document.querySelectorAll('.project-btn').forEach(btn => {
+        btn.addEventListener('click', () => enterProject(btn.dataset.project));
+      });
+      document.querySelectorAll('.project-delete-btn').forEach(btn => {
+        btn.addEventListener('click', () => deleteProject(btn.dataset.project));
+      });
+    } catch (err) {
+      alert('プロジェクト一覧の読み込みに失敗しました: ' + err.message);
+      document.getElementById('project-list').innerHTML = '読み込み失敗';
+    }
+  }
+  loadProjects();
+
+  async function enterProject(name) {
+    currentProject = name;
+    document.getElementById('project-title').style.display = "block";
+    document.getElementById('project-title').innerText = name;
+    document.getElementById('page-select').classList.remove('active');
+    document.getElementById('page-main').classList.add('active');
+    try {
+      const data = await apiFetch(`${GAS_URL}?project=${encodeURIComponent(name)}`);
+      appData = data.settings || { cast: [], scenes: [], schedules: [] };
+      responses = data.responses || [];
+      renderAll();
+    } catch (err) {
+      alert('プロジェクトの読み込みに失敗しました: ' + err.message);
+    }
+  }
+
+  function initProject() {
+    const n = document.getElementById('new-project-name').value.trim();
+    if (n) enterProject(n);
+  }
+
+  function addCast() {
+    const n = document.getElementById('cast-name').value.trim();
+    if (!n) return;
+    if (!appData.cast.includes(n)) appData.cast.push(n);
+    document.getElementById('cast-name').value = "";
+    renderAll();
+  }
+
+  function removeCast(idx) {
+    const name = appData.cast[idx];
+    appData.cast.splice(idx, 1);
+    appData.scenes.forEach(s => s.members = s.members.filter(m => m !== name));
+    renderAll();
+  }
+
+  function addScene() {
+    const n = document.getElementById('scene-name').value.trim();
+    if (n) appData.scenes.push({ name: n, members: [] });
+    document.getElementById('scene-name').value = "";
+    renderAll();
+  }
+
+  function removeScene(idx) {
+    const sceneName = appData.scenes[idx]?.name || "このシーン";
+    if (!confirm(`「${sceneName}」を削除しますか？`)) return;
+    appData.scenes.splice(idx, 1);
+    renderAll();
+  }
+
+  function moveScene(idx, direction) {
+    const newIdx = idx + direction;
+    if (newIdx < 0 || newIdx >= appData.scenes.length) return;
+    const tmp = appData.scenes[idx];
+    appData.scenes[idx] = appData.scenes[newIdx];
+    appData.scenes[newIdx] = tmp;
+    renderAll();
+  }
+
+
+
+  let sceneDragState = null;
+
+  function startScenePointerDrag(event, idx) {
+    event.preventDefault();
+
+    const box = event.currentTarget.closest('.scene-box');
+    const list = document.getElementById('admin-scene-list');
+    if (!box || !list) return;
+
+    const rect = box.getBoundingClientRect();
+    const listRect = list.getBoundingClientRect();
+    const placeholder = document.createElement('div');
+    placeholder.className = 'scene-drag-placeholder';
+    placeholder.style.height = rect.height + 'px';
+
+    box.after(placeholder);
+    box.classList.add('scene-dragging');
+
+    box.style.position = 'fixed';
+    box.style.left = rect.left + 'px';
+    box.style.top = rect.top + 'px';
+    box.style.width = rect.width + 'px';
+    box.style.margin = '0';
+    box.style.zIndex = '3000';
+
+    sceneDragState = {
+      box,
+      list,
+      placeholder,
+      originalIndex: idx,
+      offsetY: event.clientY - rect.top,
+      minTop: listRect.top,
+      maxTop: listRect.bottom - rect.height,
+      height: rect.height
+    };
+
+    window.addEventListener('pointermove', onScenePointerMove);
+    window.addEventListener('pointerup', endScenePointerDrag, { once: true });
+    window.addEventListener('pointercancel', endScenePointerDrag, { once: true });
+  }
+
+
+  function clearSceneShifts() {
+    document.querySelectorAll('#admin-scene-list .scene-box').forEach(el => {
+      el.classList.remove('shift-up', 'shift-down');
+      el.style.removeProperty('--drag-gap');
+    });
+  }
+
+  function onScenePointerMove(event) {
+    if (!sceneDragState) return;
+
+    const st = sceneDragState;
+    const nextTop = Math.min(Math.max(event.clientY - st.offsetY, st.minTop), st.maxTop);
+    st.box.style.top = nextTop + 'px';
+
+    const dragTop = nextTop;
+    const dragBottom = nextTop + st.height;
+    const children = Array.from(st.list.children);
+    const placeholderIndex = children.indexOf(st.placeholder);
+    const items = Array.from(st.list.querySelectorAll('.scene-box:not(.scene-dragging)'));
+
+    let targetMove = null;
+
+    for (const item of items) {
+      const r = item.getBoundingClientRect();
+      const mid = r.top + r.height / 2;
+      const itemIndex = Array.from(st.list.children).indexOf(item);
+
+      if (placeholderIndex < itemIndex && dragBottom > mid) {
+        targetMove = { item, direction: 'down' };
+        break;
+      }
+
+      if (placeholderIndex > itemIndex && dragTop < mid) {
+        targetMove = { item, direction: 'up' };
+        break;
+      }
+    }
+
+    clearSceneShifts();
+
+    if (!targetMove) return;
+
+    const movingHeight = st.placeholder.getBoundingClientRect().height + 5;
+    targetMove.item.style.setProperty('--drag-gap', movingHeight + 'px');
+    targetMove.item.classList.add(targetMove.direction === 'down' ? 'shift-up' : 'shift-down');
+
+    window.clearTimeout(st.swapTimer);
+    st.swapTimer = window.setTimeout(() => {
+      if (!sceneDragState) return;
+
+      clearSceneShifts();
+
+      if (targetMove.direction === 'down') {
+        targetMove.item.after(st.placeholder);
+      } else {
+        st.list.insertBefore(st.placeholder, targetMove.item);
+      }
+    }, 115);
+  }
+
+  function endScenePointerDrag() {
+    if (!sceneDragState) return;
+
+    clearSceneShifts();
+    const st = sceneDragState;
+    const oldIndex = st.originalIndex;
+
+    const orderedBoxes = Array.from(st.list.children).filter(el =>
+      el.classList.contains('scene-box') || el.classList.contains('scene-drag-placeholder')
+    );
+
+    const newIndex = orderedBoxes.indexOf(st.placeholder);
+
+    st.box.classList.remove('scene-dragging');
+    st.box.removeAttribute('style');
+    st.list.insertBefore(st.box, st.placeholder);
+    st.placeholder.remove();
+
+    window.removeEventListener('pointermove', onScenePointerMove);
+
+    sceneDragState = null;
+
+    if (newIndex >= 0 && newIndex !== oldIndex) {
+      const moved = appData.scenes.splice(oldIndex, 1)[0];
+      appData.scenes.splice(newIndex, 0, moved);
+    }
+
+    renderAll();
+  }
+
+  function toggleSceneMember(sIdx, cIdx) {
+    const cName = appData.cast[cIdx];
+    const s = appData.scenes[sIdx];
+    const idx = s.members.indexOf(cName);
+    if (idx > -1) s.members.splice(idx, 1);
+    else s.members.push(cName);
+    renderAll();
+  }
+
+  function addSchedule() {
+    const raw = document.getElementById('date-picker').value;
+    const start = document.getElementById('start-time').value;
+    const end = document.getElementById('end-time').value;
+    if (!raw) return alert('日程を選択してください。');
+    if (timeToMin(start) >= timeToMin(end)) return alert('終了時間は開始時間より後にしてください。');
+
+    const dates = raw.split(',').map(d => d.trim()).filter(Boolean);
+    dates.forEach(date => {
+      const exists = appData.schedules.some(s => s.date === date);
+      if (!exists) appData.schedules.push({ date, start, end });
+    });
+    renderAll();
+  }
+
+  function removeSchedule(idx) {
+    const sched = appData.schedules[idx];
+    if (!sched) return;
+    if (!confirm(`${sched.date} ${sched.start}〜${sched.end} を削除しますか？`)) return;
+    appData.schedules.splice(idx, 1);
+    renderAll();
+  }
+
+
+  function onStatusChange(idx) {
+    const st = document.querySelector(`input[name="st-${idx}"]:checked`)?.value;
+    document.getElementById(`t-${idx}`).style.display = st === '途中' ? 'block' : 'none';
+  }
+
+  function setAttendanceStatus(idx, value) {
+    const radio = document.querySelector(`input[name="st-${idx}"][value="${value}"]`);
+    if (radio) radio.checked = true;
+    onStatusChange(idx);
+    document.querySelectorAll(`#attendance-buttons-${idx} .attendance-btn`).forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.value === value);
+    });
+  }
+
+
+  function softValidateTimeInput(idx) {
+    const fromEl = document.getElementById('f-' + idx);
+    const toEl = document.getElementById('to-' + idx);
+    // HH:MMが5文字そろうまでは警告しない
+    if ((fromEl.value && fromEl.value.length < 5) || (toEl.value && toEl.value.length < 5)) return true;
+    return true;
+  }
+
+  function fillPreviousAttendance() {
+    const name = document.getElementById('member-select').value;
+    const r = getLatestResponse(name);
+    appData.schedules.forEach((s, idx) => {
+      document.querySelectorAll(`input[name="st-${idx}"]`).forEach(el => el.checked = false);
+      document.querySelectorAll(`#attendance-buttons-${idx} .attendance-btn`).forEach(btn => btn.classList.remove('active'));
+      const box = document.getElementById(`t-${idx}`);
+      if (box) box.style.display = 'none';
+      const fromEl = document.getElementById('f-' + idx);
+      const toEl = document.getElementById('to-' + idx);
+      if (fromEl) fromEl.value = s.start;
+      if (toEl) toEl.value = s.end;
+
+      const ans = r?.answers?.[s.date];
+      if (!ans) return;
+      const parsed = parseAnswer(ans, s);
+      let value = parsed.status === '途中' ? '途中' : parsed.status;
+      const radio = document.querySelector(`input[name="st-${idx}"][value="${value}"]`);
+      if (radio) radio.checked = true;
+      document.querySelectorAll(`#attendance-buttons-${idx} .attendance-btn`).forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.value === value);
+      });
+      if (parsed.status === '途中') {
+        if (box) box.style.display = 'block';
+        if (fromEl && parsed.start != null) fromEl.value = minToTime(parsed.start);
+        if (toEl && parsed.end != null) toEl.value = minToTime(parsed.end);
+      }
+    });
+  }
+
+  function validateTimeInput(idx) {
+    const sched = appData.schedules[idx];
+    const fromEl = document.getElementById('f-' + idx);
+    const toEl = document.getElementById('to-' + idx);
+    const from = timeToMin(fromEl.value);
+    const to = timeToMin(toEl.value);
+    const start = timeToMin(sched.start);
+    const end = timeToMin(sched.end);
+
+    if (from < start || from > end || to < start || to > end) {
+      alert(`${sched.date} は ${sched.start}〜${sched.end} の範囲内で入力してください。`);
+      fromEl.value = sched.start;
+      toEl.value = sched.end;
+      return false;
+    }
+    if (from >= to) {
+      alert('開始時間は終了時間より前にしてください。');
+      fromEl.value = sched.start;
+      toEl.value = sched.end;
+      return false;
+    }
+    return true;
+  }
+
+  function renderAll() {
+    document.getElementById('admin-cast-list').innerHTML = appData.cast.length
+      ? appData.cast.map((c, idx) => `<span class="chip">${escapeHtml(c)} <button class="chip-delete" onclick="removeCast(${idx})" aria-label="役者を削除">×</button></span>`).join('')
+      : '<small>まだ役者が登録されていません。</small>';
+
+    document.getElementById('admin-scene-list').innerHTML = appData.scenes.map((s, sIdx) => `
+      <div class="scene-box" data-scene-index="${sIdx}">
+        <div class="scene-head">
+          <div class="scene-title-row">
+            <button type="button" class="drag-handle" title="ドラッグして並び替え" aria-label="ドラッグして並び替え" onpointerdown="startScenePointerDrag(event, ${sIdx})">
+              <span class="hamburger-lines"></span>
+            </button>
+            <strong>${escapeHtml(s.name)}</strong>
+          </div>
+          <button type="button" class="icon-btn" onclick="event.stopPropagation(); removeScene(${sIdx})" aria-label="シーンを削除">×</button>
+        </div>
+        <div class="member-toggle-list">
+          ${appData.cast.map((c, cIdx) => `
+            <button type="button" class="toggle-btn ${s.members.includes(c) ? 'active' : ''}" onclick="toggleSceneMember(${sIdx}, ${cIdx})">${escapeHtml(c)}</button>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+
+    document.getElementById('admin-schedule-list').innerHTML = appData.schedules.map((s, idx) => `<span class="chip">${escapeHtml(s.date)} ${escapeHtml(s.start)}〜${escapeHtml(s.end)} <button class="chip-delete" onclick="removeSchedule(${idx})" aria-label="日程を削除">×</button></span>`).join('');
+
+    document.getElementById('member-select').innerHTML = '<option value="">名前を選択</option>' + appData.cast.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+    document.getElementById('member-select').onchange = fillPreviousAttendance;
+    document.getElementById('member-schedule-list').innerHTML = appData.schedules.map((s, idx) => `
+      <div class="date-item">
+        <strong>${escapeHtml(s.date)}</strong> <small>(${escapeHtml(s.start)}〜${escapeHtml(s.end)})</small>
+        <div class="attendance-buttons" id="attendance-buttons-${idx}">
+          <input type="radio" name="st-${idx}" value="参加" onchange="onStatusChange(${idx})" style="display:none;">
+          <input type="radio" name="st-${idx}" value="不参加" onchange="onStatusChange(${idx})" style="display:none;">
+          <input type="radio" name="st-${idx}" value="途中" onchange="onStatusChange(${idx})" style="display:none;">
+          <button type="button" class="attendance-btn" data-value="参加" onclick="setAttendanceStatus(${idx}, '参加')">参加</button>
+          <button type="button" class="attendance-btn" data-value="不参加" onclick="setAttendanceStatus(${idx}, '不参加')">不参加</button>
+          <button type="button" class="attendance-btn" data-value="途中" onclick="setAttendanceStatus(${idx}, '途中')">途中参加・途中帰宅</button>
+        </div>
+        <div id="t-${idx}" class="time-input-group">
+          <span class="time-label">参加できる時間</span>
+          <input type="time" id="f-${idx}" value="${escapeHtml(s.start)}" min="${escapeHtml(s.start)}" max="${escapeHtml(s.end)}" onblur="validateTimeInput(${idx})" oninput="softValidateTimeInput(${idx})">
+          〜
+          <input type="time" id="to-${idx}" value="${escapeHtml(s.end)}" min="${escapeHtml(s.start)}" max="${escapeHtml(s.end)}" onblur="validateTimeInput(${idx})" oninput="softValidateTimeInput(${idx})">
+          <div class="small-note">設定時間外は入力できません。</div>
+        </div>
+      </div>
+    `).join('');
+
+    updateProposals();
+    renderCrossTable();
+  }
+
+  function updateProposals() {
+    const listDiv = document.getElementById('proposal-list');
+    if (responses.length === 0) {
+      listDiv.innerHTML = "まだ役者からの回答がありません。";
+      return;
+    }
+
+    let html = "";
+    appData.schedules.forEach(sched => {
+      const sceneItems = [];
+
+      appData.scenes.forEach(scene => {
+        if (scene.members.length === 0) return;
+
+        let possibleStart = timeToMin(sched.start);
+        let possibleEnd = timeToMin(sched.end);
+        let ok = true;
+        const limitedMembers = [];
+
+        scene.members.forEach(mName => {
+          const r = getLatestResponse(mName);
+          const parsed = parseAnswer(r?.answers?.[sched.date], sched);
+          if (!r || parsed.status === "未回答" || parsed.status === "不参加") {
+            ok = false;
+            return;
+          }
+          possibleStart = Math.max(possibleStart, parsed.start);
+          possibleEnd = Math.min(possibleEnd, parsed.end);
+          if (parsed.status === "途中") limitedMembers.push(`${mName}(${parsed.detail || `${minToTime(parsed.start)}〜${minToTime(parsed.end)}`})`);
+        });
+
+        if (ok && possibleStart < possibleEnd) {
+          const timeText = `${minToTime(possibleStart)}〜${minToTime(possibleEnd)}`;
+          const note = limitedMembers.length ? ` / 時間制限あり: ${limitedMembers.join('、')}` : '';
+          sceneItems.push(`${escapeHtml(scene.name)}：${escapeHtml(timeText)}${escapeHtml(note)}`);
+        }
+      });
+
+      if (sceneItems.length > 0) {
+        html += `
+          <div class="proposal-item">
+            <strong>${escapeHtml(sched.date)}</strong> <span class="ok-badge">稽古可能</span><br>
+            <small>${sceneItems.join('<br>')}</small>
+          </div>`;
+      }
+    });
+
+    listDiv.innerHTML = html || "必要な役者が揃う日程がありません。";
+  }
+
+  function renderCrossTable() {
+    const div = document.getElementById('attendance-cross-table');
+    if (!appData.cast.length || !appData.schedules.length) {
+      div.innerHTML = '役者と日程を登録すると、ここに表が表示されます。';
+      return;
+    }
+
+    const header = appData.schedules.map(s => `<th>${escapeHtml(s.date)}<span class="small-note">${escapeHtml(s.start)}〜${escapeHtml(s.end)}</span></th>`).join('');
+    const rows = appData.cast.map(c => {
+      const r = getLatestResponse(c);
+      const cells = appData.schedules.map(s => {
+        const parsed = parseAnswer(r?.answers?.[s.date], s);
+        if (parsed.status === "参加") return '<td><span class="mark-ok">◯</span></td>';
+        if (parsed.status === "不参加") return '<td><span class="mark-ng">×</span></td>';
+        if (parsed.status === "途中") return `<td><span class="mark-mid">△</span><span class="small-note">${escapeHtml(parsed.detail || '')}</span></td>`;
+        return '<td><span class="small-note">未回答</span></td>';
+      }).join('');
+      return `<tr><td>${escapeHtml(c)}</td>${cells}</tr>`;
+    }).join('');
+
+    div.innerHTML = `<div class="table-wrap"><table class="cross-table"><thead><tr><th>役者名</th>${header}</tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+
+  async function saveAllSettings() {
+    try {
+      await apiFetch(GAS_URL, { method: "POST", body: JSON.stringify({ type: "saveSettings", projectName: currentProject, settings: appData }) });
+      alert("保存完了！");
+    } catch (err) {
+      alert('保存に失敗しました: ' + err.message);
+    }
+  }
+
+  async function submitAttendance() {
+    const name = document.getElementById('member-select').value;
+    if (!name) return alert('名前を選択してください。');
+
+    const answers = {};
+    for (let i = 0; i < appData.schedules.length; i++) {
+      const s = appData.schedules[i];
+      const st = document.querySelector(`input[name="st-${i}"]:checked`)?.value;
+      if (!st) return alert(`${s.date} の出欠を選択してください。`);
+      if (st === "途中") {
+        if (!validateTimeInput(i)) return;
+        answers[s.date] = `途中(${document.getElementById('f-'+i).value}〜${document.getElementById('to-'+i).value})`;
+      } else {
+        answers[s.date] = st;
+      }
+    }
+
+    try {
+      await apiFetch(GAS_URL, { method: "POST", body: JSON.stringify({ projectName: currentProject, name, answers }) });
+      const idx = responses.findIndex(r => r.name === name);
+      const updated = { name, answers, memo: "", timestamp: new Date().toISOString() };
+      if (idx >= 0) responses[idx] = updated;
+      else responses.push(updated);
+      renderAll();
+      document.getElementById('member-select').value = name;
+      fillPreviousAttendance();
+      alert("送信完了！");
+    } catch (err) {
+      alert('送信に失敗しました: ' + err.message);
+    }
+  }
+
+  function switchTab(mode) {
+    document.getElementById('view-member').style.display = mode === 'member' ? 'block' : 'none';
+    document.getElementById('view-admin').style.display = mode === 'admin' ? 'block' : 'none';
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + mode).classList.add('active');
+  }
+</script>
+</body>
+</html>
