@@ -964,6 +964,72 @@
       filter: none;
     }
 
+
+    /* v8.6: PDF保存ボタン */
+    .save-practice-schedule-btn {
+      background: var(--main) !important;
+      color: #ffffff !important;
+      border: none !important;
+    }
+
+    .pdf-save-btn {
+      width: 100%;
+      margin-top: 10px;
+      background: #ffffff;
+      color: var(--main);
+      border: 1px solid var(--main);
+      border-radius: 999px;
+      padding: 13px 18px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .pdf-save-btn:hover {
+      background: #DBEAFE;
+    }
+
+    @media print {
+      body {
+        background: #ffffff !important;
+        padding: 0 !important;
+      }
+
+      body * {
+        visibility: hidden !important;
+      }
+
+      #selected-practice-schedule,
+      #selected-practice-schedule * {
+        visibility: visible !important;
+      }
+
+      #selected-practice-schedule {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 24px !important;
+      }
+
+      .selected-practice-empty {
+        display: none !important;
+      }
+
+      .selected-practice-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+      }
+
+      .selected-practice-table th,
+      .selected-practice-table td {
+        border: 1px solid #D7DDE6 !important;
+        color: #111827 !important;
+        font-size: 12pt !important;
+        padding: 8px !important;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -1002,6 +1068,7 @@
         <div id="proposal-list">回答を読み込み中...</div>
         <div id="selected-practice-schedule" class="selected-practice-box"></div>
         <button type="button" id="save-practice-schedule-btn" class="save-practice-schedule-btn" onclick="savePracticeSchedule()" disabled>スケジュールを保存</button>
+        <button type="button" id="pdf-save-btn" class="pdf-save-btn" onclick="saveScheduleAsPdf()">PDFを保存</button>
       </div>
 
       <div class="card">
@@ -1915,6 +1982,17 @@
     const hasSelection = selectedPracticeItems.size > 0;
     const changed = getPracticeScheduleSignature() !== savedPracticeScheduleSignature;
     btn.disabled = !hasSelection || !changed;
+  }
+
+
+  function saveScheduleAsPdf() {
+    if (!selectedPracticeItems.size) {
+      alert("PDFに保存するスケジュールがありません。先にシーンを選択してください。");
+      return;
+    }
+
+    renderSelectedPracticeSchedule();
+    window.print();
   }
 
   async function savePracticeSchedule() {
