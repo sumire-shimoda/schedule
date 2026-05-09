@@ -659,6 +659,34 @@
       height: 24px;
     }
 
+
+    /* v7.4: 保存/送信ボタンの状態管理 */
+    .btn-disabled,
+    .btn:disabled,
+    .copy-respondent-url-btn:disabled {
+      background: #CBD5E1 !important;
+      color: #ffffff !important;
+      border: none !important;
+      cursor: not-allowed !important;
+      filter: none !important;
+    }
+    .copy-respondent-url-btn.enabled {
+      background: var(--bg) !important;
+      color: var(--main) !important;
+      border: 1px solid var(--main) !important;
+      cursor: pointer !important;
+    }
+    .copy-respondent-url-btn.enabled:hover {
+      background: #DBEAFE !important;
+    }
+
+
+    /* v7.6: 演出タブのカードタイトル余白調整 */
+    #view-admin > .card h3 {
+      margin-top: 0;
+      margin-bottom: 14px;
+    }
+
   </style>
 </head>
 <body>
@@ -701,7 +729,7 @@
       </div>
 
       <div class="card">
-        <h3>1. 役者の登録</h3>
+        <h3>役者の登録</h3>
         <div style="display:flex; gap:10px;">
           <input type="text" id="cast-name" style="flex:1; padding:8px;" placeholder="役者名">
           <button class="btn btn-sub" onclick="addCast()">追加</button>
@@ -710,7 +738,7 @@
       </div>
 
       <div class="card">
-        <h3>2. シーンの登録</h3>
+        <h3>シーンの登録</h3>
         <div style="display:flex; gap:10px;">
           <input type="text" id="scene-name" style="flex:1; padding:8px;" placeholder="シーン名（例：シーン１）">
           <button class="btn btn-sub" onclick="addScene()">シーン追加</button>
@@ -719,7 +747,7 @@
       </div>
 
       <div class="card">
-        <h3>3. 稽古日程の追加</h3>
+        <h3>稽古日程の追加</h3>
         <input type="text" id="date-picker" placeholder="日程を複数選択できます" style="width:100%; padding:8px; box-sizing:border-box;">
         <div style="margin-top:10px;">
           開始：<input type="time" id="start-time" value="18:30"> 〜
@@ -728,8 +756,8 @@
         </div>
         <div id="admin-schedule-list" style="margin-top:10px;"></div>
       </div>
-      <button class="btn btn-main" style="padding:15px; font-size:1.1rem;" onclick="saveAllSettings()">設定を保存</button>
-      <button type="button" class="copy-respondent-url-btn" onclick="copyRespondentUrl()">回答者用のURLをコピー</button>
+      <button id="save-settings-btn" class="btn btn-main" style="padding:15px; font-size:1.1rem;" onclick="saveAllSettings()">設定を保存</button>
+      <button id="copy-respondent-url-btn" type="button" class="copy-respondent-url-btn" onclick="copyRespondentUrl()" disabled>回答者用のURLをコピー</button>
     </div>
 
     <div id="view-member">
@@ -740,7 +768,7 @@
       <div class="card">
         <h3>出欠回答</h3>
         <div id="member-schedule-list"></div>
-        <button class="btn btn-main" style="margin-top:20px;" onclick="submitAttendance()">回答を送信</button>
+        <button id="submit-attendance-btn" class="btn btn-main" style="margin-top:20px;" onclick="submitAttendance()">回答を送信</button>
       </div>
     </div>
   </div>
@@ -752,6 +780,9 @@
   let currentProject = "";
   let appData = { cast: [], scenes: [], schedules: [] };
   let responses = [];
+  let adminSettingsSaved = false;
+  let adminSettingsDirty = true;
+  let memberLastSubmittedSignature = "";
 
   flatpickr("#date-picker", { mode: "multiple", dateFormat: "m/d" });
 
@@ -839,6 +870,68 @@
     copyTextToClipboard(url)
       .then(() => alert("回答者用URLをコピーしました。"))
       .catch(() => window.prompt("自動コピーできなかったため、このURLをコピーしてください。", url));
+  }
+
+
+  function getSettingsSignature() {
+    return JSON.stringify(appData);
+  }
+
+  function markSettingsDirty() {
+    adminSettingsDirty = true;
+    updateAdminButtonStates();
+  }
+
+  function markSettingsSaved() {
+    adminSettingsSaved = true;
+    adminSettingsDirty = false;
+    updateAdminButtonStates();
+  }
+
+  function updateAdminButtonStates() {
+    const saveBtn = document.getElementById('save-settings-btn');
+    const copyBtn = document.getElementById('copy-respondent-url-btn');
+
+    if (saveBtn) {
+      saveBtn.disabled = adminSettingsSaved && !adminSettingsDirty;
+      saveBtn.classList.toggle('btn-disabled', saveBtn.disabled);
+    }
+
+    if (copyBtn) {
+      copyBtn.disabled = !adminSettingsSaved;
+      copyBtn.classList.toggle('enabled', adminSettingsSaved);
+      copyBtn.classList.toggle('btn-disabled', !adminSettingsSaved);
+    }
+  }
+
+  function getCurrentAttendanceSignature() {
+    const name = document.getElementById('member-select')?.value || "";
+    const answers = [];
+
+    for (let i = 0; i < appData.schedules.length; i++) {
+      const st = document.querySelector(`input[name="st-${i}"]:checked`)?.value || "";
+      let value = st;
+
+      if (st === "途中") {
+        value += `:${document.getElementById('f-'+i)?.value || ""}-${document.getElementById('to-'+i)?.value || ""}`;
+      }
+
+      answers.push(value);
+    }
+
+    return JSON.stringify({ name, answers });
+  }
+
+  function updateSubmitButtonState() {
+    const btn = document.getElementById('submit-attendance-btn');
+    if (!btn) return;
+
+    const name = document.getElementById('member-select')?.value || "";
+    const signature = getCurrentAttendanceSignature();
+    const disabled = !!name && !!memberLastSubmittedSignature && signature === memberLastSubmittedSignature;
+
+    btn.disabled = disabled;
+    btn.classList.toggle('btn-disabled', disabled);
   }
 
   function parseAnswer(answer, sched) {
@@ -951,6 +1044,9 @@
     currentProject = "";
     appData = { cast: [], scenes: [], schedules: [] };
     responses = [];
+    adminSettingsSaved = false;
+    adminSettingsDirty = true;
+    memberLastSubmittedSignature = "";
     document.getElementById('project-title').style.display = "none";
     document.getElementById('project-title').innerHTML = "";
     document.getElementById('page-main').classList.remove('active');
@@ -1049,7 +1145,12 @@
       appData = data.settings || { cast: [], scenes: [], schedules: [] };
       responses = data.responses || [];
       localStorage.setItem(`projectSettings:${name}`, JSON.stringify(appData));
+      adminSettingsSaved = !!(appData.cast.length || appData.scenes.length || appData.schedules.length);
+      adminSettingsDirty = !adminSettingsSaved;
+      memberLastSubmittedSignature = "";
       renderAll();
+      updateAdminButtonStates();
+      updateSubmitButtonState();
     } catch (err) {
       alert('プロジェクトの読み込みに失敗しました: ' + err.message);
     }
@@ -1065,6 +1166,7 @@
     if (!n) return;
     if (!appData.cast.includes(n)) appData.cast.push(n);
     document.getElementById('cast-name').value = "";
+    markSettingsDirty();
     renderAll();
   }
 
@@ -1072,18 +1174,23 @@
     const name = appData.cast[idx];
     appData.cast.splice(idx, 1);
     appData.scenes.forEach(s => s.members = s.members.filter(m => m !== name));
+    markSettingsDirty();
     renderAll();
   }
 
   function addScene() {
     const n = document.getElementById('scene-name').value.trim();
-    if (n) appData.scenes.push({ name: n, members: [] });
+    if (n) {
+      appData.scenes.push({ name: n, members: [] });
+      markSettingsDirty();
+    }
     document.getElementById('scene-name').value = "";
     renderAll();
   }
 
   function removeScene(idx) {
     appData.scenes.splice(idx, 1);
+    markSettingsDirty();
     renderAll();
   }
 
@@ -1093,6 +1200,7 @@
     const tmp = appData.scenes[idx];
     appData.scenes[idx] = appData.scenes[newIdx];
     appData.scenes[newIdx] = tmp;
+    markSettingsDirty();
     renderAll();
   }
 
@@ -1225,6 +1333,7 @@
     if (newIndex >= 0 && newIndex !== oldIndex) {
       const moved = appData.scenes.splice(oldIndex, 1)[0];
       appData.scenes.splice(newIndex, 0, moved);
+      markSettingsDirty();
     }
 
     renderAll();
@@ -1236,6 +1345,7 @@
     const idx = s.members.indexOf(cName);
     if (idx > -1) s.members.splice(idx, 1);
     else s.members.push(cName);
+    markSettingsDirty();
     renderAll();
   }
 
@@ -1249,7 +1359,10 @@
     const dates = raw.split(',').map(d => normalizeScheduleDate(d)).filter(Boolean);
     dates.forEach(date => {
       const exists = appData.schedules.some(s => normalizeScheduleDate(s.date) === date);
-      if (!exists) appData.schedules.push({ date, start, end });
+      if (!exists) {
+        appData.schedules.push({ date, start, end });
+        markSettingsDirty();
+      }
     });
     renderAll();
   }
@@ -1257,6 +1370,7 @@
   function removeSchedule(idx) {
     if (!appData.schedules[idx]) return;
     appData.schedules.splice(idx, 1);
+    markSettingsDirty();
     renderAll();
   }
 
@@ -1273,6 +1387,7 @@
     document.querySelectorAll(`#attendance-buttons-${idx} .attendance-btn`).forEach(btn => {
       btn.classList.toggle('active', btn.dataset.value === value);
     });
+    updateSubmitButtonState();
   }
 
 
@@ -1341,7 +1456,7 @@
   function renderAll() {
     document.getElementById('admin-cast-list').innerHTML = appData.cast.length
       ? appData.cast.map((c, idx) => `<span class="chip">${escapeHtml(c)} <button class="chip-delete" onclick="removeCast(${idx})" aria-label="役者を削除">×</button></span>`).join('')
-      : '<small>まだ役者が登録されていません。</small>';
+      : '';
 
     document.getElementById('admin-scene-list').innerHTML = appData.scenes.map((s, sIdx) => `
       <div class="scene-box" data-scene-index="${sIdx}">
@@ -1365,7 +1480,11 @@
     document.getElementById('admin-schedule-list').innerHTML = appData.schedules.map((s, idx) => `<span class="chip">${escapeHtml(formatScheduleDate(s.date))} ${escapeHtml(s.start)}〜${escapeHtml(s.end)} <button class="chip-delete" onclick="removeSchedule(${idx})" aria-label="日程を削除">×</button></span>`).join('');
 
     document.getElementById('member-select').innerHTML = '<option value="">名前を選択</option>' + appData.cast.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
-    document.getElementById('member-select').onchange = fillPreviousAttendance;
+    document.getElementById('member-select').onchange = () => {
+      memberLastSubmittedSignature = "";
+      fillPreviousAttendance();
+      updateSubmitButtonState();
+    };
     document.getElementById('member-schedule-list').innerHTML = appData.schedules.map((s, idx) => `
       <div class="date-item">
         <strong>${escapeHtml(formatScheduleDate(s.date))}</strong> <small>(${escapeHtml(s.start)}〜${escapeHtml(s.end)})</small>
@@ -1379,9 +1498,9 @@
         </div>
         <div id="t-${idx}" class="time-input-group">
           <span class="time-label">参加できる時間</span>
-          <input type="time" id="f-${idx}" value="${escapeHtml(s.start)}" min="${escapeHtml(s.start)}" max="${escapeHtml(s.end)}" onblur="validateTimeInput(${idx})" oninput="softValidateTimeInput(${idx})">
+          <input type="time" id="f-${idx}" value="${escapeHtml(s.start)}" min="${escapeHtml(s.start)}" max="${escapeHtml(s.end)}" onblur="validateTimeInput(${idx}); updateSubmitButtonState();" oninput="softValidateTimeInput(${idx}); updateSubmitButtonState();">
           〜
-          <input type="time" id="to-${idx}" value="${escapeHtml(s.end)}" min="${escapeHtml(s.start)}" max="${escapeHtml(s.end)}" onblur="validateTimeInput(${idx})" oninput="softValidateTimeInput(${idx})">
+          <input type="time" id="to-${idx}" value="${escapeHtml(s.end)}" min="${escapeHtml(s.start)}" max="${escapeHtml(s.end)}" onblur="validateTimeInput(${idx}); updateSubmitButtonState();" oninput="softValidateTimeInput(${idx}); updateSubmitButtonState();">
           <div class="small-note">設定時間外は入力できません。</div>
         </div>
       </div>
@@ -1389,6 +1508,8 @@
 
     updateProposals();
     renderCrossTable();
+    updateAdminButtonStates();
+    updateSubmitButtonState();
   }
 
   function updateProposals() {
@@ -1468,6 +1589,7 @@
     try {
       await apiFetch(GAS_URL, { method: "POST", body: JSON.stringify({ type: "saveSettings", projectName: currentProject, settings: appData }) });
       localStorage.setItem(`projectSettings:${currentProject}`, JSON.stringify(appData));
+      markSettingsSaved();
       alert("保存完了！");
     } catch (err) {
       alert('保存に失敗しました: ' + err.message);
@@ -1500,6 +1622,8 @@
       renderAll();
       document.getElementById('member-select').value = name;
       fillPreviousAttendance();
+      memberLastSubmittedSignature = getCurrentAttendanceSignature();
+      updateSubmitButtonState();
       alert("送信完了！");
     } catch (err) {
       alert('送信に失敗しました: ' + err.message);
