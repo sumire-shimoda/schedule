@@ -735,6 +735,37 @@
       border-color: #6B7280 !important;
     }
 
+
+    /* v6.6: 三点メニューのクリック不発修正 */
+    .project-card {
+      position: relative !important;
+      display: block !important;
+      min-height: 92px !important;
+    }
+    .project-card .project-btn {
+      width: 100% !important;
+      min-height: 92px !important;
+      border-color: #6B7280 !important;
+      padding-right: 48px !important;
+      position: relative !important;
+      z-index: 1 !important;
+    }
+    .project-menu-wrap {
+      position: absolute !important;
+      top: 10px !important;
+      right: 10px !important;
+      z-index: 999 !important;
+      pointer-events: auto !important;
+    }
+    .project-menu-btn,
+    .project-menu,
+    .project-menu * {
+      pointer-events: auto !important;
+    }
+    .project-menu {
+      z-index: 1000 !important;
+    }
+
   </style>
 </head>
 <body>
@@ -944,7 +975,9 @@
   }
 
   function toggleProjectMenu(event) {
+    event.preventDefault();
     event.stopPropagation();
+
     const wrap = event.currentTarget.closest('.project-menu-wrap');
     const menu = wrap?.querySelector('.project-menu');
     if (!menu) return;
@@ -963,9 +996,7 @@
   function removeProjectCardFromSite(name) {
     document.querySelectorAll('.project-card').forEach(card => {
       const btn = card.querySelector('.project-btn');
-      if (btn?.dataset.project === name) {
-        card.remove();
-      }
+      if (btn?.dataset.project === name) card.remove();
     });
 
     const grid = document.querySelector('.project-list-grid');
@@ -992,11 +1023,8 @@
       }
 
       localStorage.removeItem(`projectSettings:${name}`);
-
-      // サイト上のカードも即削除
       removeProjectCardFromSite(name);
 
-      // 現在開いているプロジェクトを消した場合はトップに戻す
       if (currentProject === name) {
         setProjectToUrl("");
         currentProject = "";
@@ -1008,9 +1036,7 @@
         document.getElementById('page-select').classList.add('active');
       }
 
-      // スプシ側の最新状態と同期
       await loadProjects();
-
       alert("稽古予定を削除しました。");
     } catch (err) {
       alert('削除に失敗しました。Apps Scriptを最新版として再デプロイしているか確認してください: ' + err.message);
@@ -1077,7 +1103,7 @@
       const data = await apiFetch(GAS_URL);
       const projects = data.existingProjects || [];
       document.getElementById('project-list').innerHTML = projects.length
-        ? `<div class="project-list-grid">${projects.map(p => `<div class="project-card" data-project-card="${escapeHtml(p)}"><button class="btn project-btn" data-project="${escapeHtml(p)}"><span class="project-card-title">${escapeHtml(p)}</span>${renderProjectDateChips(p)}</button><div class="project-menu-wrap"><button type="button" class="project-menu-btn" onclick="toggleProjectMenu(event)" aria-label="予定メニュー"><span class="vertical-dots"></span></button><div class="project-menu" data-project="${escapeHtml(p)}"><button type="button" class="project-menu-action" onclick="shareProject(event, ${jsString(p)})">共有</button><button type="button" class="project-menu-action project-menu-delete" onclick="handleProjectDeleteFromMenu(event, ${jsString(p)})">予定を削除する</button></div></div></div>`).join('')}</div>`
+        ? `<div class="project-list-grid">${projects.map(p => `<div class="project-card" data-project-card="${escapeHtml(p)}"><button type="button" class="btn project-btn" data-project="${escapeHtml(p)}"><span class="project-card-title">${escapeHtml(p)}</span>${renderProjectDateChips(p)}</button><div class="project-menu-wrap"><button type="button" class="project-menu-btn" onclick="toggleProjectMenu(event)" aria-label="予定メニュー"><span class="vertical-dots"></span></button><div class="project-menu" data-project="${escapeHtml(p)}" onclick="event.stopPropagation()"><button type="button" class="project-menu-action" onclick="shareProject(event, ${jsString(p)})">共有</button><button type="button" class="project-menu-action project-menu-delete" onclick="handleProjectDeleteFromMenu(event, ${jsString(p)})">予定を削除する</button></div></div></div>`).join('')}</div>`
         : 'まだプロジェクトがありません。';
       document.querySelectorAll('.project-btn').forEach(btn => {
         btn.addEventListener('click', () => enterProject(btn.dataset.project));
