@@ -636,6 +636,29 @@
       background: var(--bg) !important;
     }
 
+
+    /* v7.3: 薄い説明文・回答者URL hover・戻るアイコン */
+    .copy-respondent-url-btn:hover {
+      background: #DBEAFE !important;
+    }
+    .empty-note {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .project-back-icon {
+      display: inline-block;
+      width: 9px;
+      height: 9px;
+      border-left: 2px solid currentColor;
+      border-bottom: 2px solid currentColor;
+      transform: rotate(45deg);
+      margin-left: 3px;
+    }
+    .project-back-btn {
+      width: 24px;
+      height: 24px;
+    }
+
   </style>
 </head>
 <body>
@@ -669,7 +692,6 @@
     <div id="view-admin" style="display:none;">
       <div class="proposal-box">
         <h3 style="margin-top:0; color: var(--text);">稽古可能なシーンの提案</h3>
-        <p style="font-size: 0.85rem; color: var(--muted);">途中参加・途中帰宅がある場合は、全員が重なる時間も表示します。</p>
         <div id="proposal-list">回答を読み込み中...</div>
       </div>
 
@@ -971,7 +993,7 @@
       const projects = data.existingProjects || [];
       document.getElementById('project-list').innerHTML = projects.length
         ? `<div class="project-list-grid">${projects.map(p => `<div class="project-card"><button type="button" class="btn project-btn" data-project="${escapeHtml(p)}"><span class="project-card-title">${escapeHtml(p)}</span>${renderProjectDateChips(p)}</button><button type="button" class="project-action-btn project-share-btn" data-project="${escapeHtml(p)}">共有</button><button type="button" class="project-action-btn project-delete-btn-inline" data-project="${escapeHtml(p)}">削除</button></div>`).join('')}</div>`
-        : 'まだプロジェクトがありません。';
+        : '<span class="empty-note">まだ予定がありません</span>';
 
       document.querySelectorAll('.project-btn').forEach(btn => {
         btn.addEventListener('click', () => enterProject(btn.dataset.project));
@@ -1019,7 +1041,7 @@
     setProjectToUrl(name);
     currentProject = name;
     document.getElementById('project-title').style.display = "flex";
-    document.getElementById('project-title').innerHTML = `<button type="button" class="project-back-btn" onclick="goHome()" aria-label="ホームに戻る">←</button><span class="project-title-name">${escapeHtml(name)}</span>`;
+    document.getElementById('project-title').innerHTML = `<button type="button" class="project-back-btn" onclick="goHome()" aria-label="ホームに戻る"><span class="project-back-icon"></span></button><span class="project-title-name">${escapeHtml(name)}</span>`;
     document.getElementById('page-select').classList.remove('active');
     document.getElementById('page-main').classList.add('active');
     try {
@@ -1372,7 +1394,7 @@
   function updateProposals() {
     const listDiv = document.getElementById('proposal-list');
     if (responses.length === 0) {
-      listDiv.innerHTML = "まだ役者からの回答がありません。";
+      listDiv.innerHTML = '<span class="empty-note">まだ役者からの回答がありません。</span>';
       return;
     }
 
@@ -1416,13 +1438,13 @@
       }
     });
 
-    listDiv.innerHTML = html || "必要な役者が揃う日程がありません。";
+    listDiv.innerHTML = html || '<span class="empty-note">必要な役者が揃う日程がありません。</span>';
   }
 
   function renderCrossTable() {
     const div = document.getElementById('attendance-cross-table');
     if (!appData.cast.length || !appData.schedules.length) {
-      div.innerHTML = '役者と日程を登録すると、ここに表が表示されます。';
+      div.innerHTML = '<span class="empty-note">役者と日程を登録すると、ここに表が表示されます。</span>';
       return;
     }
 
