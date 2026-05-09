@@ -1251,6 +1251,34 @@
       align-content: flex-start;
     }
 
+
+    /* v9.8: スマホで共有/削除ボタンが重ならないよう調整 */
+    @media (max-width: 640px) {
+      .project-card {
+        position: relative;
+      }
+
+      .project-share-btn,
+      .project-delete-btn-inline {
+        position: absolute !important;
+        right: 10px !important;
+        min-width: 58px;
+        justify-content: center;
+      }
+
+      .project-share-btn {
+        top: 10px !important;
+      }
+
+      .project-delete-btn-inline {
+        top: 46px !important;
+      }
+
+      .project-card .project-btn {
+        padding-right: 86px !important;
+      }
+    }
+
   </style>
 </head>
 <body>
