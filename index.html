@@ -1349,6 +1349,35 @@
       }
     }
 
+
+    /* v10.3: 回答者用URLコピーボタンを丸ボタンに戻す */
+    .copy-respondent-url-btn {
+      width: 100%;
+      margin-top: 14px;
+      border-radius: 999px !important;
+      padding: 13px 18px !important;
+      min-height: 48px;
+      background: #ffffff;
+      color: var(--main);
+      border: 1px solid var(--main) !important;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background .15s ease;
+    }
+
+    .copy-respondent-url-btn:hover {
+      background: #DBEAFE !important;
+    }
+
+    .copy-respondent-url-btn:disabled {
+      background: #CBD5E1 !important;
+      color: #ffffff !important;
+      border: none !important;
+      cursor: not-allowed;
+    }
+
   </style>
 </head>
 <body>
