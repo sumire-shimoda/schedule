@@ -902,6 +902,52 @@
     loadProjects();
   }
 
+
+  function getProjectScheduleDates(projectName) {
+    try {
+      const saved = localStorage.getItem(`projectSettings:${projectName}`);
+      if (!saved) return [];
+      const settings = JSON.parse(saved);
+      return (settings.schedules || []).map(s => s.date).filter(Boolean);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function renderProjectDateChips(projectName, maxCount = 6) {
+    const dates = getProjectScheduleDates(projectName);
+    if (!dates.length) {
+      return '<div class="project-card-dates"><span class="project-date-chip">日程未設定</span></div>';
+    }
+
+    const visible = dates
+      .slice(0, maxCount)
+      .map(d => `<span class="project-date-chip">${escapeHtml(d)}</span>`)
+      .join('');
+
+    const rest = dates.length - maxCount;
+    const more = rest > 0 ? `<span class="project-date-more">他${rest}件</span>` : '';
+
+    return `<div class="project-card-dates">${visible}${more}</div>`;
+  }
+
+  function toggleProjectMenu(event) {
+    event.stopPropagation();
+    const wrap = event.currentTarget.closest('.project-menu-wrap');
+    const menu = wrap?.querySelector('.project-menu');
+    if (!menu) return;
+
+    document.querySelectorAll('.project-menu').forEach(other => {
+      if (other !== menu) other.classList.remove('active');
+    });
+
+    menu.classList.toggle('active');
+  }
+
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.project-menu').forEach(menu => menu.classList.remove('active'));
+  });
+
   async function deleteProject(name) {
     if (!confirm(`稽古予定「${name}」を削除します。スプレッドシート上のシートも消えます。本当に削除しますか？`)) return;
     try {
