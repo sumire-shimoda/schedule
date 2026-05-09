@@ -724,15 +724,9 @@
     }
 
 
-    /* v6.2: 共有/削除修正 + 既存予定カード微調整 */
+    /* v6.3: 既存予定カード微調整 */
     .project-card .project-btn {
-      border-color: #4B5563 !important;
-      padding-top: 18px !important;
-      padding-bottom: 20px !important;
-    }
-    .project-card-title,
-    .project-card-dates {
-      transform: translateY(-2px);
+      border-color: #6B7280 !important;
     }
 
   </style>
@@ -964,7 +958,7 @@
     if (!confirm(`稽古予定「${name}」を削除します。スプレッドシート上のシートも消えます。本当に削除しますか？`)) return;
 
     try {
-      const res = await apiFetch(GAS_URL, {
+      const result = await apiFetch(GAS_URL, {
         method: "POST",
         body: JSON.stringify({
           type: "deleteProject",
@@ -973,8 +967,8 @@
         })
       });
 
-      if (res && res.status && res.status !== "success") {
-        throw new Error(res.message || "削除に失敗しました");
+      if (result && result.status && result.status !== "success") {
+        throw new Error(result.message || "削除に失敗しました");
       }
 
       localStorage.removeItem(`projectSettings:${name}`);
@@ -1004,16 +998,19 @@
   }
 
   function copyTextToClipboard(text) {
+    // HTTPS環境では Clipboard API を優先
     if (navigator.clipboard && window.isSecureContext) {
       return navigator.clipboard.writeText(text);
     }
 
+    // file:// や一部ブラウザ用のフォールバック
     const textarea = document.createElement('textarea');
     textarea.value = text;
     textarea.setAttribute('readonly', '');
     textarea.style.position = 'fixed';
     textarea.style.left = '-9999px';
     textarea.style.top = '0';
+    textarea.style.opacity = '0';
     document.body.appendChild(textarea);
     textarea.focus();
     textarea.select();
@@ -1021,7 +1018,8 @@
     try {
       const ok = document.execCommand('copy');
       document.body.removeChild(textarea);
-      return ok ? Promise.resolve() : Promise.reject(new Error('copy failed'));
+      if (ok) return Promise.resolve();
+      return Promise.reject(new Error('copy command failed'));
     } catch (err) {
       document.body.removeChild(textarea);
       return Promise.reject(err);
@@ -1029,14 +1027,16 @@
   }
 
   async function shareProject(event, projectName) {
+    event.preventDefault();
     event.stopPropagation();
+
     const url = makeProjectShareUrl(projectName);
 
     try {
       await copyTextToClipboard(url);
       alert("共有用URLをコピーしました。");
     } catch (err) {
-      window.prompt("このURLをコピーしてください。", url);
+      window.prompt("自動コピーできなかったため、このURLをコピーしてください。", url);
     }
 
     document.querySelectorAll('.project-menu').forEach(menu => menu.classList.remove('active'));
