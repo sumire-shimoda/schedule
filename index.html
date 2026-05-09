@@ -511,6 +511,73 @@
       }
     }
 
+
+    /* v5.4: 既存予定カードのデザイン調整 */
+    .project-list-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 8px;
+    }
+    .project-card {
+      min-height: 92px;
+    }
+    .project-card .project-btn {
+      width: 100%;
+      min-height: 92px;
+      border-radius: 18px;
+      background: #ffffff !important;
+      color: var(--text) !important;
+      border: 1px solid var(--main) !important;
+      padding: 14px 16px;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 10px;
+      box-shadow: none;
+      filter: none !important;
+    }
+    .project-card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.35;
+    }
+    .project-card-dates {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      overflow: hidden;
+      max-height: 30px;
+    }
+    .project-date-chip {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      background: #F1F5F9;
+      color: var(--muted);
+      padding: 4px 9px;
+      font-size: 11px;
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .project-date-more {
+      font-size: 11px;
+      color: var(--muted-light);
+      white-space: nowrap;
+    }
+    @media (max-width: 640px) {
+      .project-list-grid {
+        grid-template-columns: 1fr;
+      }
+      .project-card,
+      .project-card .project-btn {
+        min-height: 86px;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -688,18 +755,37 @@
     }
   }
 
+
+  function getProjectScheduleDates(projectName) {
+    try {
+      const saved = localStorage.getItem(`projectSettings:${projectName}`);
+      if (!saved) return [];
+      const settings = JSON.parse(saved);
+      return (settings.schedules || []).map(s => s.date).filter(Boolean);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function renderProjectDateChips(projectName, maxCount = 4) {
+    const dates = getProjectScheduleDates(projectName);
+    if (!dates.length) return '<div class="project-card-dates"><span class="project-date-chip">日程未設定</span></div>';
+
+    const visible = dates.slice(0, maxCount).map(d => `<span class="project-date-chip">${escapeHtml(d)}</span>`).join('');
+    const rest = dates.length - maxCount;
+    const more = rest > 0 ? `<span class="project-date-more">他${rest}件</span>` : '';
+    return `<div class="project-card-dates">${visible}${more}</div>`;
+  }
+
   async function loadProjects() {
     try {
       const data = await apiFetch(GAS_URL);
       const projects = data.existingProjects || [];
       document.getElementById('project-list').innerHTML = projects.length
-        ? `<div class="project-list-grid">${projects.map(p => `<div class="project-card"><button class="btn btn-sub project-btn" data-project="${escapeHtml(p)}">${escapeHtml(p)}</button><button class="btn btn-danger project-delete-btn" data-project="${escapeHtml(p)}">削除</button></div>`).join('')}</div>`
+        ? `<div class="project-list-grid">${projects.map(p => `<div class="project-card"><button class="btn project-btn" data-project="${escapeHtml(p)}"><span class="project-card-title">${escapeHtml(p)}</span>${renderProjectDateChips(p)}</button></div>`).join('')}</div>`
         : 'まだプロジェクトがありません。';
       document.querySelectorAll('.project-btn').forEach(btn => {
         btn.addEventListener('click', () => enterProject(btn.dataset.project));
-      });
-      document.querySelectorAll('.project-delete-btn').forEach(btn => {
-        btn.addEventListener('click', () => deleteProject(btn.dataset.project));
       });
     } catch (err) {
       alert('プロジェクト一覧の読み込みに失敗しました: ' + err.message);
@@ -718,6 +804,7 @@
       const data = await apiFetch(`${GAS_URL}?project=${encodeURIComponent(name)}`);
       appData = data.settings || { cast: [], scenes: [], schedules: [] };
       responses = data.responses || [];
+      localStorage.setItem(`projectSettings:${name}`, JSON.stringify(appData));
       renderAll();
     } catch (err) {
       alert('プロジェクトの読み込みに失敗しました: ' + err.message);
@@ -1140,6 +1227,7 @@
   async function saveAllSettings() {
     try {
       await apiFetch(GAS_URL, { method: "POST", body: JSON.stringify({ type: "saveSettings", projectName: currentProject, settings: appData }) });
+      localStorage.setItem(`projectSettings:${currentProject}`, JSON.stringify(appData));
       alert("保存完了！");
     } catch (err) {
       alert('保存に失敗しました: ' + err.message);
