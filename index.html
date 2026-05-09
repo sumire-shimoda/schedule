@@ -903,6 +903,67 @@
       word-break: break-word;
     }
 
+
+    /* v8.5: 稽古スケジュール保存・見出し・表罫線・役者未選択時非表示 */
+    #member-answer-card {
+      display: none;
+    }
+
+    #member-answer-card.visible {
+      display: block;
+    }
+
+    .practice-section-title {
+      margin: 0 0 8px;
+      font-size: 1.05rem;
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .practice-section-note {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    .selected-practice-box {
+      margin-top: 22px;
+      padding-top: 18px;
+    }
+
+    .selected-practice-table {
+      border-collapse: collapse !important;
+    }
+
+    .selected-practice-table th,
+    .selected-practice-table td {
+      border: 1px solid var(--border-soft) !important;
+    }
+
+    .save-practice-schedule-btn {
+      width: 100%;
+      margin-top: 18px;
+      background: var(--main);
+      color: white;
+      border: none;
+      border-radius: 999px;
+      padding: 13px 18px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .save-practice-schedule-btn:hover {
+      filter: brightness(.97);
+    }
+
+    .save-practice-schedule-btn:disabled {
+      background: #CBD5E1 !important;
+      color: white !important;
+      cursor: not-allowed;
+      filter: none;
+    }
+
   </style>
 </head>
 <body>
@@ -936,8 +997,11 @@
     <div id="view-admin" style="display:none;">
       <div class="proposal-box">
         
+        <h3 class="practice-section-title">稽古可能なシーン</h3>
+        <p class="practice-section-note">日ごとに練習したいシーンを選んでください。チェックしたシーンが稽古スケジュール表に反映されます。</p>
         <div id="proposal-list">回答を読み込み中...</div>
         <div id="selected-practice-schedule" class="selected-practice-box"></div>
+        <button type="button" id="save-practice-schedule-btn" class="save-practice-schedule-btn" onclick="savePracticeSchedule()" disabled>スケジュールを保存</button>
       </div>
 
       <div class="card">
@@ -989,7 +1053,7 @@
         <h3>名前を選択</h3>
         <select id="member-select" style="width:100%; padding:10px;"></select>
       </div>
-      <div class="card">
+      <div id="member-answer-card" class="card">
         <h3>出欠回答</h3>
         <div id="member-schedule-list"></div>
         <button id="submit-attendance-btn" class="btn btn-main" style="margin-top:20px;" onclick="submitAttendance()">回答を送信</button>
@@ -1000,7 +1064,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbxaLyjYOfiikJIRhtJWAB7OYx0P2m28GZznAr39xatD6ZZW2aeqJ8v4rXf38wfAD7sp/exec";
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbyx_OYOMtxSTe8nv0mcjK59GRGUpPTKzIqoEKTG1fBdIM-SI8watSOny0yZHZVgVAeM/exec";
   let currentProject = "";
   let appData = { cast: [], scenes: [], schedules: [] };
   let responses = [];
@@ -1009,6 +1073,7 @@
   let adminSavedSettingsSignature = "";
   let memberLastSubmittedSignature = "";
   const selectedPracticeItems = new Map();
+  let savedPracticeScheduleSignature = "";
 
   flatpickr("#date-picker", { mode: "multiple", dateFormat: "m/d" });
 
@@ -1281,6 +1346,8 @@
     adminSettingsDirty = true;
     adminSavedSettingsSignature = "";
     memberLastSubmittedSignature = "";
+    selectedPracticeItems.clear();
+    savedPracticeScheduleSignature = "";
     document.getElementById('project-title').style.display = "none";
     document.getElementById('project-title').innerHTML = "";
     document.getElementById('page-main').classList.remove('active');
@@ -1379,6 +1446,7 @@
       appData = data.settings || { cast: [], scenes: [], schedules: [] };
       responses = data.responses || [];
       localStorage.setItem(`projectSettings:${name}`, JSON.stringify(appData));
+      loadPracticeScheduleFromSettings(appData);
       adminSettingsSaved = !!(appData.cast.length || appData.scenes.length || appData.schedules.length);
       adminSavedSettingsSignature = getSettingsSignature();
       refreshSettingsDirtyState();
@@ -1634,6 +1702,14 @@
     return true;
   }
 
+
+  function updateMemberAnswerVisibility() {
+    const card = document.getElementById('member-answer-card');
+    const name = document.getElementById('member-select')?.value || "";
+    if (!card) return;
+    card.classList.toggle('visible', !!name);
+  }
+
   function fillPreviousAttendance() {
     const name = document.getElementById('member-select').value;
     const r = getLatestResponse(name);
@@ -1717,6 +1793,7 @@
     document.getElementById('member-select').innerHTML = '<option value="">名前を選択</option>' + appData.cast.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
     document.getElementById('member-select').onchange = () => {
       memberLastSubmittedSignature = "";
+      updateMemberAnswerVisibility();
       fillPreviousAttendance();
       updateSubmitButtonState();
     };
@@ -1745,6 +1822,7 @@
     renderCrossTable();
     updateAdminButtonStates();
     updateSubmitButtonState();
+    updateMemberAnswerVisibility();
   }
 
 
@@ -1759,6 +1837,7 @@
       selectedPracticeItems.set(key, item);
     }
     renderSelectedPracticeSchedule();
+    updatePracticeScheduleSaveButton();
   }
 
   function renderSelectedPracticeSchedule() {
@@ -1768,7 +1847,8 @@
     const items = Array.from(selectedPracticeItems.values());
 
     if (!items.length) {
-      div.innerHTML = '<div class="selected-practice-empty">チェックしたシーンが、ここに実スケジュールとして表示されます。</div>';
+      div.innerHTML = '<h3 class="practice-section-title">稽古スケジュール表</h3><div class="selected-practice-empty">チェックしたシーンが、ここに実スケジュールとして表示されます。</div>';
+      updatePracticeScheduleSaveButton();
       return;
     }
 
@@ -1806,6 +1886,7 @@
     `).join('');
 
     div.innerHTML = `
+      <h3 class="practice-section-title">稽古スケジュール表</h3>
       <div class="table-wrap">
         <table class="selected-practice-table">
           <thead>
@@ -1819,6 +1900,55 @@
         </table>
       </div>
     `;
+    updatePracticeScheduleSaveButton();
+  }
+
+
+  function getPracticeScheduleSignature() {
+    return JSON.stringify(Array.from(selectedPracticeItems.entries()));
+  }
+
+  function updatePracticeScheduleSaveButton() {
+    const btn = document.getElementById('save-practice-schedule-btn');
+    if (!btn) return;
+
+    const hasSelection = selectedPracticeItems.size > 0;
+    const changed = getPracticeScheduleSignature() !== savedPracticeScheduleSignature;
+    btn.disabled = !hasSelection || !changed;
+  }
+
+  async function savePracticeSchedule() {
+    const scheduleItems = Array.from(selectedPracticeItems.values());
+
+    try {
+      await apiFetch(GAS_URL, {
+        method: "POST",
+        body: JSON.stringify({
+          type: "savePracticeSchedule",
+          projectName: currentProject,
+          selectedSchedule: scheduleItems
+        })
+      });
+
+      savedPracticeScheduleSignature = getPracticeScheduleSignature();
+      updatePracticeScheduleSaveButton();
+      alert("スケジュールを保存しました。");
+    } catch (err) {
+      alert("スケジュールの保存に失敗しました: " + err.message);
+    }
+  }
+
+  function loadPracticeScheduleFromSettings(settings) {
+    selectedPracticeItems.clear();
+    const saved = settings?.selectedSchedule || [];
+
+    saved.forEach(item => {
+      if (!item || !item.date || !item.scene || !item.time) return;
+      const key = makePracticeKey(item.date, item.scene, item.time);
+      selectedPracticeItems.set(key, item);
+    });
+
+    savedPracticeScheduleSignature = getPracticeScheduleSignature();
   }
 
   function pruneSelectedPracticeItems(validKeys) {
