@@ -699,6 +699,30 @@
       z-index: 200;
     }
 
+
+    /* v6.0: 共有・削除メニュー */
+    .project-menu {
+      min-width: 168px;
+    }
+    .project-menu-action {
+      width: 100%;
+      background: white;
+      color: var(--text);
+      border: none;
+      border-radius: 10px;
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .project-menu-action:hover {
+      background: #F8FAFC;
+    }
+    .project-menu-delete {
+      color: #DC2626 !important;
+    }
+
   </style>
 </head>
 <body>
@@ -853,7 +877,21 @@
     return responses.find(res => res.name === name);
   }
 
+
+  function getProjectFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('project') || "";
+  }
+
+  function setProjectToUrl(projectName) {
+    const url = new URL(window.location.href);
+    if (projectName) url.searchParams.set('project', projectName);
+    else url.searchParams.delete('project');
+    window.history.pushState({}, "", url);
+  }
+
   function goHome() {
+    setProjectToUrl("");
     currentProject = "";
     appData = { cast: [], scenes: [], schedules: [] };
     responses = [];
@@ -865,64 +903,59 @@
   }
 
   async function deleteProject(name) {
-    if (!confirm(`プロジェクト「${name}」を削除します。スプレッドシート上のシートも消えます。本当に削除しますか？`)) return;
+    if (!confirm(`稽古予定「${name}」を削除します。スプレッドシート上のシートも消えます。本当に削除しますか？`)) return;
     try {
-      await apiFetch(GAS_URL, { method: "POST", body: JSON.stringify({ type: "deleteProject", projectName: name }) });
-      if (currentProject === name) goHome();
-      else await loadProjects();
-      alert("プロジェクトを削除しました。");
+      await apiFetch(GAS_URL, {
+        method: "POST",
+        body: JSON.stringify({ type: "deleteProject", projectName: name })
+      });
+
+      localStorage.removeItem(`projectSettings:${name}`);
+
+      if (currentProject === name) {
+        goHome();
+      } else {
+        await loadProjects();
+      }
+
+      alert("稽古予定を削除しました。");
     } catch (err) {
-      alert('削除に失敗しました: ' + err.message);
+      alert('削除に失敗しました。Apps Script側に deleteProject の処理が入っているか確認してください: ' + err.message);
     }
   }
 
-
-  function getProjectScheduleDates(projectName) {
-    try {
-      const saved = localStorage.getItem(`projectSettings:${projectName}`);
-      if (!saved) return [];
-      const settings = JSON.parse(saved);
-      return (settings.schedules || []).map(s => s.date).filter(Boolean);
-    } catch (e) {
-      return [];
-    }
+  function makeProjectShareUrl(projectName) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('project', projectName);
+    return url.toString();
   }
 
-  function renderProjectDateChips(projectName, maxCount = 6) {
-    const dates = getProjectScheduleDates(projectName);
-    if (!dates.length) return '<div class="project-card-dates"><span class="project-date-chip">日程未設定</span></div>';
-
-    // 1列に収まるよう、短い日付チップを優先して表示。入り切らない分は「他n件」へまとめる。
-    const visible = dates.slice(0, maxCount).map(d => `<span class="project-date-chip">${escapeHtml(d)}</span>`).join('');
-    const rest = dates.length - maxCount;
-    const more = rest > 0 ? `<span class="project-date-more">他${rest}件</span>` : '';
-    return `<div class="project-card-dates">${visible}${more}</div>`;
-  }
-
-
-  function toggleProjectMenu(event) {
+  async function shareProject(event, projectName) {
     event.stopPropagation();
-    const wrap = event.currentTarget.closest('.project-menu-wrap');
-    const menu = wrap?.querySelector('.project-menu');
-    if (!menu) return;
+    const url = makeProjectShareUrl(projectName);
 
-    document.querySelectorAll('.project-menu').forEach(other => {
-      if (other !== menu) other.classList.remove('active');
-    });
+    try {
+      await navigator.clipboard.writeText(url);
+      alert("共有用URLをコピーしました。");
+    } catch (err) {
+      window.prompt("このURLをコピーしてください。", url);
+    }
 
-    menu.classList.toggle('active');
+    document.querySelectorAll('.project-menu').forEach(menu => menu.classList.remove('active'));
   }
 
-  document.addEventListener('click', () => {
+  async function handleProjectDeleteFromMenu(event, projectName) {
+    event.stopPropagation();
     document.querySelectorAll('.project-menu').forEach(menu => menu.classList.remove('active'));
-  });
+    await deleteProject(projectName);
+  }
 
   async function loadProjects() {
     try {
       const data = await apiFetch(GAS_URL);
       const projects = data.existingProjects || [];
       document.getElementById('project-list').innerHTML = projects.length
-        ? `<div class="project-list-grid">${projects.map(p => `<div class="project-card"><button class="btn project-btn" data-project="${escapeHtml(p)}"><span class="project-card-title">${escapeHtml(p)}</span>${renderProjectDateChips(p)}</button><div class="project-menu-wrap"><button type="button" class="project-menu-btn" onclick="toggleProjectMenu(event)" aria-label="予定メニュー"><span class="vertical-dots"></span></button><div class="project-menu" data-project="${escapeHtml(p)}"><button type="button" class="project-menu-delete" onclick="event.stopPropagation(); deleteProject(${jsString(p)})">予定を削除する</button></div></div></div>`).join('')}</div>`
+        ? `<div class="project-list-grid">${projects.map(p => `<div class="project-card"><button class="btn project-btn" data-project="${escapeHtml(p)}"><span class="project-card-title">${escapeHtml(p)}</span>${renderProjectDateChips(p)}</button><div class="project-menu-wrap"><button type="button" class="project-menu-btn" onclick="toggleProjectMenu(event)" aria-label="予定メニュー"><span class="vertical-dots"></span></button><div class="project-menu" data-project="${escapeHtml(p)}"><button type="button" class="project-menu-action" onclick="shareProject(event, ${jsString(p)})">共有</button><button type="button" class="project-menu-action project-menu-delete" onclick="handleProjectDeleteFromMenu(event, ${jsString(p)})">予定を削除する</button></div></div></div>`).join('')}</div>`
         : 'まだプロジェクトがありません。';
       document.querySelectorAll('.project-btn').forEach(btn => {
         btn.addEventListener('click', () => enterProject(btn.dataset.project));
@@ -932,9 +965,24 @@
       document.getElementById('project-list').innerHTML = '読み込み失敗';
     }
   }
-  loadProjects();
+  async function bootFromUrl() {
+    const projectFromUrl = getProjectFromUrl();
+    if (projectFromUrl) {
+      await enterProject(projectFromUrl);
+    } else {
+      await loadProjects();
+    }
+  }
+  bootFromUrl();
+
+  window.addEventListener('popstate', () => {
+    const projectFromUrl = getProjectFromUrl();
+    if (projectFromUrl) enterProject(projectFromUrl);
+    else goHome();
+  });
 
   async function enterProject(name) {
+    setProjectToUrl(name);
     currentProject = name;
     document.getElementById('project-title').style.display = "block";
     document.getElementById('project-title').innerText = name;
