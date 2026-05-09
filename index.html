@@ -526,9 +526,9 @@
       width: 100%;
       min-height: 92px;
       border-radius: 18px;
-      background: var(--bg) !important;
+      background: #ffffff !important;
       color: var(--text) !important;
-      border: none !important;
+      border: 1px solid #111827 !important;
       padding: 14px 16px;
       text-align: left;
       display: flex;
@@ -576,6 +576,118 @@
       .project-card .project-btn {
         min-height: 86px;
       }
+    }
+
+
+    /* v5.7: 既存予定カードの表示調整とメニュー */
+    .project-card {
+      position: relative;
+      min-height: 92px;
+    }
+    .project-card .project-btn {
+      position: relative;
+      justify-content: center !important;
+      padding: 20px 44px 18px 18px !important;
+      gap: 8px !important;
+    }
+    .project-card .project-btn:hover {
+      background: var(--bg) !important;
+    }
+    .project-card-dates {
+      display: flex;
+      flex-wrap: nowrap !important;
+      gap: 6px;
+      align-items: center;
+      overflow: hidden;
+      max-height: 24px !important;
+      white-space: nowrap;
+      width: 100%;
+    }
+    .project-card-dates .project-date-chip {
+      flex: 0 0 auto;
+    }
+    .project-date-more {
+      flex: 0 0 auto;
+      font-size: 11px;
+      color: var(--muted-light);
+      white-space: nowrap;
+    }
+    .project-menu-wrap {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 30;
+    }
+    .project-menu-btn {
+      width: 28px;
+      height: 28px;
+      border: none;
+      background: transparent;
+      border-radius: 999px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      padding: 0;
+    }
+    .project-menu-btn:hover {
+      background: #EEF2F7;
+      color: var(--text);
+    }
+    .vertical-dots,
+    .vertical-dots::before,
+    .vertical-dots::after {
+      display: block;
+      width: 3px;
+      height: 3px;
+      border-radius: 999px;
+      background: currentColor;
+      content: "";
+    }
+    .vertical-dots {
+      position: relative;
+    }
+    .vertical-dots::before {
+      position: absolute;
+      top: -6px;
+      left: 0;
+    }
+    .vertical-dots::after {
+      position: absolute;
+      top: 6px;
+      left: 0;
+    }
+    .project-menu {
+      display: none;
+      position: absolute;
+      top: 34px;
+      right: 0;
+      min-width: 150px;
+      background: white;
+      border: none;
+      border-radius: 14px;
+      box-shadow: 0 10px 26px rgba(15, 23, 42, 0.14);
+      padding: 6px;
+      z-index: 40;
+    }
+    .project-menu.active {
+      display: block;
+    }
+    .project-menu-delete {
+      width: 100%;
+      background: white;
+      color: #DC2626;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .project-menu-delete:hover {
+      background: #FEF2F2;
     }
 
   </style>
@@ -767,22 +879,37 @@
     }
   }
 
-  function renderProjectDateChips(projectName, maxCount = 4) {
+  function renderProjectDateChips(projectName, maxCount = 6) {
     const dates = getProjectScheduleDates(projectName);
     if (!dates.length) return '<div class="project-card-dates"><span class="project-date-chip">日程未設定</span></div>';
 
+    // 1列に収まるよう、短い日付チップを優先して表示。入り切らない分は「他n件」へまとめる。
     const visible = dates.slice(0, maxCount).map(d => `<span class="project-date-chip">${escapeHtml(d)}</span>`).join('');
     const rest = dates.length - maxCount;
     const more = rest > 0 ? `<span class="project-date-more">他${rest}件</span>` : '';
     return `<div class="project-card-dates">${visible}${more}</div>`;
   }
 
+
+  function toggleProjectMenu(event, projectName) {
+    event.stopPropagation();
+    document.querySelectorAll('.project-menu').forEach(menu => {
+      if (menu.dataset.project !== projectName) menu.classList.remove('active');
+    });
+    const menu = document.querySelector(`.project-menu[data-project="${CSS.escape(projectName)}"]`);
+    if (menu) menu.classList.toggle('active');
+  }
+
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.project-menu').forEach(menu => menu.classList.remove('active'));
+  });
+
   async function loadProjects() {
     try {
       const data = await apiFetch(GAS_URL);
       const projects = data.existingProjects || [];
       document.getElementById('project-list').innerHTML = projects.length
-        ? `<div class="project-list-grid">${projects.map(p => `<div class="project-card"><button class="btn project-btn" data-project="${escapeHtml(p)}"><span class="project-card-title">${escapeHtml(p)}</span>${renderProjectDateChips(p)}</button></div>`).join('')}</div>`
+        ? `<div class="project-list-grid">${projects.map(p => `<div class="project-card"><button class="btn project-btn" data-project="${escapeHtml(p)}"><span class="project-card-title">${escapeHtml(p)}</span>${renderProjectDateChips(p)}</button><div class="project-menu-wrap"><button type="button" class="project-menu-btn" onclick="toggleProjectMenu(event, ${jsString(p)})" aria-label="予定メニュー"><span class="vertical-dots"></span></button><div class="project-menu" data-project="${escapeHtml(p)}"><button type="button" class="project-menu-delete" onclick="event.stopPropagation(); deleteProject(${jsString(p)})">予定を削除する</button></div></div></div>`).join('')}</div>`
         : 'まだプロジェクトがありません。';
       document.querySelectorAll('.project-btn').forEach(btn => {
         btn.addEventListener('click', () => enterProject(btn.dataset.project));
