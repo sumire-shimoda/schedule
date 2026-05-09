@@ -573,6 +573,45 @@
       }
     }
 
+
+    /* v7.0: 既存予定カード・共有削除hover・戻るボタン */
+    .project-card .project-btn {
+      border-color: var(--border) !important;
+    }
+    .project-share-btn:hover {
+      background: #EFF6FF !important;
+    }
+    .project-delete-btn-inline:hover {
+      background: #FEF2F2 !important;
+    }
+    #project-title {
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+    .project-back-btn {
+      border: none;
+      background: transparent;
+      color: #4B5563;
+      font-size: 20px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 2px 4px 2px 0;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .project-back-btn:hover {
+      color: var(--text);
+      background: #EEF2F7;
+    }
+    .project-title-name {
+      color: #4B5563;
+      font-weight: 600;
+      font-size: 1.08rem;
+    }
+
   </style>
 </head>
 <body>
@@ -580,7 +619,7 @@
 <div id="loading-overlay"><div class="loader-card"><div class="spinner"></div><div id="loading-text">通信中...</div></div></div>
 
 <div class="container">
-  <h1 id="project-title" style="display:none; font-size:1.08rem; color:#4B5563; font-weight:600; margin:0 0 16px;"></h1>
+  <h1 id="project-title" style="display:none; margin:0 0 16px;"></h1>
 
   <div id="page-select" class="page active">
     <div class="card">
@@ -662,7 +701,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbw2ljUNpv1_bUyh_8cbAyprW_LuzkA3yfWsKKspG1ACcRW-Dja3wTX9Pn_HhLPqPifv/exec";
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbxaLyjYOfiikJIRhtJWAB7OYx0P2m28GZznAr39xatD6ZZW2aeqJ8v4rXf38wfAD7sp/exec";
   let currentProject = "";
   let appData = { cast: [], scenes: [], schedules: [] };
   let responses = [];
@@ -817,7 +856,7 @@
     appData = { cast: [], scenes: [], schedules: [] };
     responses = [];
     document.getElementById('project-title').style.display = "none";
-    document.getElementById('project-title').innerText = "";
+    document.getElementById('project-title').innerHTML = "";
     document.getElementById('page-main').classList.remove('active');
     document.getElementById('page-select').classList.add('active');
     loadProjects();
@@ -905,8 +944,8 @@
   async function enterProject(name) {
     setProjectToUrl(name);
     currentProject = name;
-    document.getElementById('project-title').style.display = "block";
-    document.getElementById('project-title').innerText = name;
+    document.getElementById('project-title').style.display = "flex";
+    document.getElementById('project-title').innerHTML = `<button type="button" class="project-back-btn" onclick="goHome()" aria-label="ホームに戻る">＜</button><span class="project-title-name">${escapeHtml(name)}</span>`;
     document.getElementById('page-select').classList.remove('active');
     document.getElementById('page-main').classList.add('active');
     try {
