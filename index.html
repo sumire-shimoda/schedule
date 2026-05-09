@@ -1539,7 +1539,7 @@
         let possibleStart = timeToMin(sched.start);
         let possibleEnd = timeToMin(sched.end);
         let ok = true;
-        const limitedMembers = [];
+        const availableMembers = [];
 
         scene.members.forEach(mName => {
           const r = getLatestResponse(mName);
@@ -1548,15 +1548,22 @@
             ok = false;
             return;
           }
+
           possibleStart = Math.max(possibleStart, parsed.start);
           possibleEnd = Math.min(possibleEnd, parsed.end);
-          if (parsed.status === "途中") limitedMembers.push(`${mName}(${parsed.detail || `${minToTime(parsed.start)}〜${minToTime(parsed.end)}`})`);
+
+          if (parsed.status === "途中") {
+            const detail = parsed.detail || `${minToTime(parsed.start)}〜${minToTime(parsed.end)}`;
+            availableMembers.push(`${mName}(${detail})`);
+          } else {
+            availableMembers.push(mName);
+          }
         });
 
         if (ok && possibleStart < possibleEnd) {
           const timeText = `${minToTime(possibleStart)}〜${minToTime(possibleEnd)}`;
-          const note = limitedMembers.length ? ` / 時間制限あり: ${limitedMembers.join('、')}` : '';
-          sceneItems.push(`${escapeHtml(scene.name)}：${escapeHtml(timeText)}${escapeHtml(note)}`);
+          const memberText = availableMembers.length ? ` / ${availableMembers.join('、')}` : '';
+          sceneItems.push(`${escapeHtml(scene.name)}：${escapeHtml(timeText)}${escapeHtml(memberText)}`);
         }
       });
 
