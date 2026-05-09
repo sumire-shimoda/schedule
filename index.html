@@ -1185,7 +1185,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbyx_OYOMtxSTe8nv0mcjK59GRGUpPTKzIqoEKTG1fBdIM-SI8watSOny0yZHZVgVAeM/exec";
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbwxoSN7a27pSIUyf-s8A3q8TbgO_d-b9q_iC77Odz6W_ZfSS4WfB3qlVH7D2m9OZlwo/exec";
   let currentProject = "";
   let appData = { cast: [], scenes: [], schedules: [] };
   let responses = [];
@@ -1965,6 +1965,7 @@
     } else {
       selectedPracticeItems.set(key, item);
     }
+    appData.selectedSchedule = Array.from(selectedPracticeItems.values());
     renderSelectedPracticeSchedule();
     updatePracticeScheduleSaveButton();
   }
@@ -2156,9 +2157,10 @@
 
   async function savePracticeSchedule() {
     const scheduleItems = Array.from(selectedPracticeItems.values());
+    appData.selectedSchedule = scheduleItems;
 
     try {
-      await apiFetch(GAS_URL, {
+      const result = await apiFetch(GAS_URL, {
         method: "POST",
         body: JSON.stringify({
           type: "savePracticeSchedule",
@@ -2167,6 +2169,11 @@
         })
       });
 
+      if (result && result.status && result.status !== "success") {
+        throw new Error(result.message || "保存に失敗しました");
+      }
+
+      localStorage.setItem(`projectSettings:${currentProject}`, JSON.stringify(appData));
       savedPracticeScheduleSignature = getPracticeScheduleSignature();
       updatePracticeScheduleSaveButton();
       alert("スケジュールを保存しました。");
@@ -2185,6 +2192,7 @@
       selectedPracticeItems.set(key, item);
     });
 
+    appData.selectedSchedule = saved;
     savedPracticeScheduleSignature = getPracticeScheduleSignature();
   }
 
@@ -2192,6 +2200,8 @@
     Array.from(selectedPracticeItems.keys()).forEach(key => {
       if (!validKeys.has(key)) selectedPracticeItems.delete(key);
     });
+    appData.selectedSchedule = Array.from(selectedPracticeItems.values());
+    updatePracticeScheduleSaveButton();
   }
 
   function updateProposals() {
@@ -2313,6 +2323,7 @@
     if (!adminSettingsDirty) return;
 
     try {
+      appData.selectedSchedule = Array.from(selectedPracticeItems.values());
       await apiFetch(GAS_URL, { method: "POST", body: JSON.stringify({ type: "saveSettings", projectName: currentProject, settings: appData }) });
       localStorage.setItem(`projectSettings:${currentProject}`, JSON.stringify(appData));
       markSettingsSaved();
