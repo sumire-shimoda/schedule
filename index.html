@@ -1084,6 +1084,83 @@
       word-break: break-word;
     }
 
+
+    /* v9.2: スマホで既存予定カードが横にはみ出さないよう調整 */
+    .project-list-grid,
+    .project-card,
+    .project-card .project-btn {
+      max-width: 100%;
+      min-width: 0;
+    }
+
+    .project-card {
+      overflow: hidden;
+    }
+
+    .project-card .project-btn {
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+
+    .project-card-title {
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .project-card-dates {
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+
+      .site-header {
+        margin-left: -12px;
+        margin-right: -12px;
+      }
+
+      .card {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+
+      .project-list-grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+        width: 100%;
+      }
+
+      .project-card .project-btn {
+        width: 100%;
+        padding-left: 14px !important;
+        padding-right: 78px !important;
+      }
+
+      .project-action-btn {
+        padding: 5px 9px;
+        font-size: 11px;
+      }
+
+      .project-share-btn {
+        right: 10px;
+      }
+
+      .project-delete-btn-inline {
+        right: 10px;
+      }
+
+      .project-date-chip {
+        max-width: 86px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+
   </style>
 </head>
 <body>
