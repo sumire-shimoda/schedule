@@ -782,6 +782,7 @@
   let responses = [];
   let adminSettingsSaved = false;
   let adminSettingsDirty = true;
+  let adminSavedSettingsSignature = "";
   let memberLastSubmittedSignature = "";
 
   flatpickr("#date-picker", { mode: "multiple", dateFormat: "m/d" });
@@ -877,23 +878,30 @@
     return JSON.stringify(appData);
   }
 
+  function refreshSettingsDirtyState() {
+    adminSettingsDirty = getSettingsSignature() !== adminSavedSettingsSignature;
+  }
+
   function markSettingsDirty() {
-    adminSettingsDirty = true;
+    refreshSettingsDirtyState();
     updateAdminButtonStates();
   }
 
   function markSettingsSaved() {
     adminSettingsSaved = true;
-    adminSettingsDirty = false;
+    adminSavedSettingsSignature = getSettingsSignature();
+    refreshSettingsDirtyState();
     updateAdminButtonStates();
   }
 
   function updateAdminButtonStates() {
+    refreshSettingsDirtyState();
+
     const saveBtn = document.getElementById('save-settings-btn');
     const copyBtn = document.getElementById('copy-respondent-url-btn');
 
     if (saveBtn) {
-      saveBtn.disabled = adminSettingsSaved && !adminSettingsDirty;
+      saveBtn.disabled = !adminSettingsDirty;
       saveBtn.classList.toggle('btn-disabled', saveBtn.disabled);
     }
 
@@ -1046,6 +1054,7 @@
     responses = [];
     adminSettingsSaved = false;
     adminSettingsDirty = true;
+    adminSavedSettingsSignature = "";
     memberLastSubmittedSignature = "";
     document.getElementById('project-title').style.display = "none";
     document.getElementById('project-title').innerHTML = "";
@@ -1146,7 +1155,8 @@
       responses = data.responses || [];
       localStorage.setItem(`projectSettings:${name}`, JSON.stringify(appData));
       adminSettingsSaved = !!(appData.cast.length || appData.scenes.length || appData.schedules.length);
-      adminSettingsDirty = !adminSettingsSaved;
+      adminSavedSettingsSignature = getSettingsSignature();
+      refreshSettingsDirtyState();
       memberLastSubmittedSignature = "";
       renderAll();
       updateAdminButtonStates();
@@ -1586,6 +1596,9 @@
   }
 
   async function saveAllSettings() {
+    refreshSettingsDirtyState();
+    if (!adminSettingsDirty) return;
+
     try {
       await apiFetch(GAS_URL, { method: "POST", body: JSON.stringify({ type: "saveSettings", projectName: currentProject, settings: appData }) });
       localStorage.setItem(`projectSettings:${currentProject}`, JSON.stringify(appData));
