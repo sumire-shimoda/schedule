@@ -1378,6 +1378,12 @@
       cursor: not-allowed;
     }
 
+
+    /* v10.4: 既存予定カードの日程をGASから取得 */
+    .project-date-chip.loading {
+      color: var(--muted-light);
+    }
+
   </style>
 </head>
 <body>
@@ -1681,8 +1687,13 @@
     window.history.pushState({}, "", url);
   }
 
+  const projectSettingsCache = new Map();
+
   function getProjectScheduleDates(projectName) {
     try {
+      const cached = projectSettingsCache.get(projectName);
+      if (cached) return (cached.schedules || []).map(s => s.date).filter(Boolean);
+
       const saved = localStorage.getItem(`projectSettings:${projectName}`);
       if (!saved) return [];
       const settings = JSON.parse(saved);
@@ -1692,13 +1703,29 @@
     }
   }
 
+  async function fetchProjectSettingsForCard(projectName) {
+    try {
+      const data = await apiFetch(`${GAS_URL}?project=${encodeURIComponent(projectName)}`);
+      const settings = data.settings || { cast: [], scenes: [], schedules: [] };
+      projectSettingsCache.set(projectName, settings);
+      localStorage.setItem(`projectSettings:${projectName}`, JSON.stringify(settings));
+
+      const datesEl = document.querySelector(`.project-card-dates[data-project="${CSS.escape(projectName)}"]`);
+      if (datesEl) {
+        datesEl.outerHTML = renderProjectDateChips(projectName);
+      }
+    } catch (err) {
+      // カードの日程だけ取得できなかった場合は、トップ画面全体は止めない
+      console.warn("project settings fetch failed:", projectName, err);
+    }
+  }
+
   function renderProjectDateChips(projectName, maxCount = 5) {
     const dates = getProjectScheduleDates(projectName);
     if (!dates.length) {
-      return '<div class="project-card-dates"><span class="project-date-chip">日程未設定</span></div>';
+      return `<div class="project-card-dates" data-project="${escapeHtml(projectName)}"><span class="project-date-chip loading">日程読み込み中</span></div>`;
     }
 
-    // カード内では最大2行まで。残りは最後に「他n件」として表示。
     const visibleCount = Math.min(maxCount, dates.length);
     const visible = dates
       .slice(0, visibleCount)
@@ -1708,7 +1735,7 @@
     const rest = dates.length - visibleCount;
     const more = rest > 0 ? `<span class="project-date-more">他${rest}件</span>` : '';
 
-    return `<div class="project-card-dates">${visible}${more}</div>`;
+    return `<div class="project-card-dates" data-project="${escapeHtml(projectName)}">${visible}${more}</div>`;
   }
 
   function makeProjectShareUrl(projectName) {
@@ -1820,6 +1847,8 @@
           deleteProject(btn.dataset.project);
         });
       });
+
+      projects.forEach(p => fetchProjectSettingsForCard(p));
     } catch (err) {
       alert('プロジェクト一覧の読み込みに失敗しました: ' + err.message);
       document.getElementById('project-list').innerHTML = '読み込み失敗';
