@@ -1030,6 +1030,60 @@
       }
     }
 
+
+    /* v8.8: スケジュール表の角の罫線をつなげる */
+    .selected-practice-table {
+      border-collapse: separate !important;
+      border-spacing: 0 !important;
+      border: 1px solid var(--border-soft) !important;
+      border-radius: 12px !important;
+      overflow: hidden !important;
+    }
+    .selected-practice-table th,
+    .selected-practice-table td {
+      border-right: 1px solid var(--border-soft) !important;
+      border-bottom: 1px solid var(--border-soft) !important;
+    }
+    .selected-practice-table th:last-child,
+    .selected-practice-table td:last-child {
+      border-right: none !important;
+    }
+    .selected-practice-table tbody tr:last-child td {
+      border-bottom: none !important;
+    }
+
+
+    /* v8.9: 出欠表のスマホ横スクロール安定化 */
+    #attendance-cross-table {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    #attendance-cross-table .table-wrap {
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch;
+      max-width: 100%;
+    }
+
+    table.cross-table {
+      min-width: max-content !important;
+      width: max-content !important;
+    }
+
+    .cross-table th,
+    .cross-table td {
+      white-space: nowrap;
+    }
+
+    .cross-table td:first-child,
+    .cross-table th:first-child {
+      min-width: 96px;
+      max-width: 160px;
+      white-space: normal;
+      word-break: break-word;
+    }
+
   </style>
 </head>
 <body>
@@ -1068,7 +1122,7 @@
         <div id="proposal-list">回答を読み込み中...</div>
         <div id="selected-practice-schedule" class="selected-practice-box"></div>
         <button type="button" id="save-practice-schedule-btn" class="save-practice-schedule-btn" onclick="savePracticeSchedule()" disabled>スケジュールを保存</button>
-        <button type="button" id="pdf-save-btn" class="pdf-save-btn" onclick="saveScheduleAsPdf()">PDFを保存</button>
+        <button type="button" id="pdf-save-btn" class="pdf-save-btn" onclick="openPrintPage()">PDFを保存</button>
       </div>
 
       <div class="card">
@@ -1734,6 +1788,14 @@
         markSettingsDirty();
       }
     });
+
+    const picker = document.getElementById('date-picker');
+    if (picker?._flatpickr) {
+      picker._flatpickr.clear();
+    } else if (picker) {
+      picker.value = "";
+    }
+
     renderAll();
   }
 
@@ -1914,7 +1976,7 @@
     const items = Array.from(selectedPracticeItems.values());
 
     if (!items.length) {
-      div.innerHTML = '<h3 class="practice-section-title">稽古スケジュール表</h3><div class="selected-practice-empty">チェックしたシーンが、ここに実スケジュールとして表示されます。</div>';
+      div.innerHTML = '<h3 class="practice-section-title">稽古スケジュール表</h3><div class="selected-practice-empty">チェックしたシーンが、ここに実際のスケジュールとして表示されます。</div>';
       updatePracticeScheduleSaveButton();
       return;
     }
@@ -1985,14 +2047,111 @@
   }
 
 
-  function saveScheduleAsPdf() {
+  function openPrintPage() {
     if (!selectedPracticeItems.size) {
-      alert("PDFに保存するスケジュールがありません。先にシーンを選択してください。");
+      alert("印刷するスケジュールがありません。先にシーンを選択してください。");
       return;
     }
 
     renderSelectedPracticeSchedule();
-    window.print();
+
+    const scheduleHtml = document.getElementById('selected-practice-schedule')?.innerHTML || "";
+    const projectName = currentProject || "稽古スケジュール";
+
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert("印刷用ページを開けませんでした。ポップアップブロックを解除してください。");
+      return;
+    }
+
+    printWindow.document.open();
+    printWindow.document.write(`
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${escapeHtml(projectName)} 印刷用スケジュール</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #111827;
+    margin: 24px;
+    background: #ffffff;
+  }
+  h1 {
+    font-size: 20px;
+    margin: 0 0 18px;
+  }
+  .selected-practice-empty {
+    color: #6B7280;
+    font-size: 13px;
+  }
+  .table-wrap {
+    overflow: visible;
+  }
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid #D7DDE6;
+    border-radius: 12px;
+    overflow: hidden;
+    font-size: 14px;
+  }
+  th, td {
+    border-right: 1px solid #D7DDE6;
+    border-bottom: 1px solid #D7DDE6;
+    padding: 10px 9px;
+    text-align: left;
+    vertical-align: top;
+    color: #111827;
+  }
+  th {
+    background: #F8FAFC;
+    font-weight: 700;
+  }
+  th:last-child, td:last-child {
+    border-right: none;
+  }
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+  .selected-practice-table th:nth-child(1),
+  .selected-practice-table td:nth-child(1) {
+    width: 92px;
+    white-space: nowrap;
+  }
+  .selected-practice-table th:nth-child(2),
+  .selected-practice-table td:nth-child(2),
+  .selected-practice-table th:nth-child(3),
+  .selected-practice-table td:nth-child(3) {
+    width: calc((100% - 92px) / 2);
+    word-break: break-word;
+  }
+  .print-note {
+    margin-top: 16px;
+    color: #6B7280;
+    font-size: 12px;
+  }
+  @media print {
+    body {
+      margin: 16mm;
+    }
+    .print-note {
+      display: none;
+    }
+  }
+</style>
+</head>
+<body>
+  <h1>${escapeHtml(projectName)}</h1>
+  ${scheduleHtml}
+  <p class="print-note">iPhoneの場合は共有メニューから「プリント」またはPDF保存を選んでください。</p>
+</body>
+</html>
+    `);
+    printWindow.document.close();
   }
 
   async function savePracticeSchedule() {
