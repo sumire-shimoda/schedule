@@ -573,8 +573,7 @@
       }
     }
 
-
-    /* v7.0: 既存予定カード・共有削除hover・戻るボタン */
+/* v7.0: 既存予定カード・共有削除hover・戻るボタン */
     .project-card .project-btn {
       border-color: var(--border) !important;
     }
@@ -613,31 +612,16 @@
     }
 
 
-    /* v7.1: 回答者用URLコピーボタン */
-    .copy-respondent-url-btn {
-      width: 100%;
-      margin-top: 14px;
-      background: var(--bg);
-      color: var(--main);
-      border: 1px solid var(--main);
-      border-radius: 999px;
-      padding: 13px 18px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-    .copy-respondent-url-btn:hover {
-      background: #EFF6FF;
-    }
 
-
-    /* v7.2: カードhover時に共有/削除ボタンも同色化 */
+/* v7.2: カードhover時に共有/削除ボタンも同色化 */
     .project-card:hover .project-share-btn,
     .project-card:hover .project-delete-btn-inline {
       background: var(--bg) !important;
     }
 
 
-    /* v7.3: 薄い説明文・回答者URL hover・戻るアイコン */
+
+/* v7.3: 薄い説明文・回答者URL hover・戻るアイコン */
     .copy-respondent-url-btn:hover {
       background: #DBEAFE !important;
     }
@@ -1252,59 +1236,7 @@
     }
 
 
-    /* v9.8: スマホで共有/削除ボタンが重ならないよう調整 */
-    @media (max-width: 640px) {
-      .project-card {
-        position: relative;
-      }
-
-      .project-share-btn,
-      .project-delete-btn-inline {
-        position: absolute !important;
-        right: 10px !important;
-        min-width: 58px;
-        justify-content: center;
-      }
-
-      .project-share-btn {
-        top: 10px !important;
-      }
-
-      .project-delete-btn-inline {
-        top: 46px !important;
-      }
-
-      .project-card .project-btn {
-        padding-right: 86px !important;
-      }
-    }
-
-
-    /* v9.9: スマホ用 共有/削除ボタンをさらに小型化 */
-    @media (max-width: 640px) {
-      .project-share-btn,
-      .project-delete-btn-inline {
-        right: 8px !important;
-        min-width: 44px !important;
-        height: 24px !important;
-        padding: 0 8px !important;
-        font-size: 10px !important;
-        line-height: 1 !important;
-        border-radius: 999px !important;
-      }
-
-      .project-share-btn {
-        top: 8px !important;
-      }
-
-      .project-delete-btn-inline {
-        top: 36px !important;
-      }
-
-      .project-card .project-btn {
-        padding-right: 66px !important;
-      }
-    }
+    
 
   </style>
 </head>
