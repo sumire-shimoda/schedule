@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
   <title>劇団調整ポータル Pro - シーン自動判定付</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <style>
@@ -1161,6 +1161,89 @@
       }
     }
 
+
+    /* v9.3: 既存予定カードの日程を2行まで表示 */
+    .project-card-dates {
+      display: flex !important;
+      flex-wrap: wrap !important;
+      gap: 6px !important;
+      align-items: flex-start !important;
+      max-height: 54px !important;
+      line-height: 1.2;
+      overflow: hidden;
+    }
+
+    .project-date-chip,
+    .project-date-more {
+      margin-bottom: 0;
+    }
+
+    .project-date-more {
+      display: inline-flex;
+      align-items: center;
+      height: 20px;
+      font-size: 11px;
+      color: var(--muted-light);
+      white-space: nowrap;
+    }
+
+    @media (max-width: 640px) {
+      .project-card-dates {
+        max-height: 54px !important;
+      }
+
+      .project-date-chip {
+        max-width: none;
+      }
+    }
+
+
+    /* v9.4: スマホ入力欄・ボタン拡大 & iPhoneズーム防止 */
+    @media (max-width: 640px) {
+      input,
+      select,
+      textarea,
+      button {
+        font-size: 16px !important;
+      }
+
+      input,
+      select,
+      textarea {
+        min-height: 48px;
+      }
+
+      .btn,
+      button,
+      .project-action-btn,
+      .copy-respondent-url-btn,
+      .save-practice-schedule-btn,
+      .pdf-save-btn {
+        min-height: 48px;
+      }
+
+      .chip {
+        min-height: 40px;
+      }
+
+      .attendance-btn {
+        min-height: 44px;
+        padding: 10px 14px !important;
+      }
+
+      .project-card .project-btn {
+        min-height: 104px !important;
+      }
+    }
+
+    /* 「新しく管理したい〜」を既存予定タイトルと同サイズに */
+    .new-project-title {
+      font-size: 1.05rem !important;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+
   </style>
 </head>
 <body>
@@ -1172,7 +1255,7 @@
 
   <div id="page-select" class="page active">
     <div class="card">
-      <p style="margin-top:0; color:var(--muted); line-height:1.7;">新しく管理したい稽古の予定を入力してください。</p>
+      <p style="margin-top:0; color:var(--muted); line-height:1.7;" class="new-project-title">新しく管理したい稽古の予定を入力してください。</p>
       <div style="display:flex; gap:10px; align-items:center; margin-bottom:22px;">
         <input type="text" id="new-project-name" placeholder="例：5月の稽古" style="flex:1; padding:10px; border-radius:999px; border:1px solid var(--border);">
         <button class="btn btn-sub" onclick="initProject()">作成</button>
@@ -1475,18 +1558,20 @@
     }
   }
 
-  function renderProjectDateChips(projectName, maxCount = 6) {
+  function renderProjectDateChips(projectName, maxCount = 5) {
     const dates = getProjectScheduleDates(projectName);
     if (!dates.length) {
       return '<div class="project-card-dates"><span class="project-date-chip">日程未設定</span></div>';
     }
 
+    // カード内では最大2行まで。残りは最後に「他n件」として表示。
+    const visibleCount = Math.min(maxCount, dates.length);
     const visible = dates
-      .slice(0, maxCount)
+      .slice(0, visibleCount)
       .map(d => `<span class="project-date-chip">${escapeHtml(formatScheduleDate(d))}</span>`)
       .join('');
 
-    const rest = dates.length - maxCount;
+    const rest = dates.length - visibleCount;
     const more = rest > 0 ? `<span class="project-date-more">他${rest}件</span>` : '';
 
     return `<div class="project-card-dates">${visible}${more}</div>`;
@@ -2148,7 +2233,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 <title>${escapeHtml(projectName)} 印刷用スケジュール</title>
 <style>
   body {
