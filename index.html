@@ -690,6 +690,15 @@
       background: #FEF2F2;
     }
 
+
+    /* v5.8: 三点メニュー表示の安定化 */
+    .project-menu-wrap {
+      z-index: 100;
+    }
+    .project-menu {
+      z-index: 200;
+    }
+
   </style>
 </head>
 <body>
@@ -891,13 +900,17 @@
   }
 
 
-  function toggleProjectMenu(event, projectName) {
+  function toggleProjectMenu(event) {
     event.stopPropagation();
-    document.querySelectorAll('.project-menu').forEach(menu => {
-      if (menu.dataset.project !== projectName) menu.classList.remove('active');
+    const wrap = event.currentTarget.closest('.project-menu-wrap');
+    const menu = wrap?.querySelector('.project-menu');
+    if (!menu) return;
+
+    document.querySelectorAll('.project-menu').forEach(other => {
+      if (other !== menu) other.classList.remove('active');
     });
-    const menu = document.querySelector(`.project-menu[data-project="${CSS.escape(projectName)}"]`);
-    if (menu) menu.classList.toggle('active');
+
+    menu.classList.toggle('active');
   }
 
   document.addEventListener('click', () => {
@@ -909,7 +922,7 @@
       const data = await apiFetch(GAS_URL);
       const projects = data.existingProjects || [];
       document.getElementById('project-list').innerHTML = projects.length
-        ? `<div class="project-list-grid">${projects.map(p => `<div class="project-card"><button class="btn project-btn" data-project="${escapeHtml(p)}"><span class="project-card-title">${escapeHtml(p)}</span>${renderProjectDateChips(p)}</button><div class="project-menu-wrap"><button type="button" class="project-menu-btn" onclick="toggleProjectMenu(event, ${jsString(p)})" aria-label="予定メニュー"><span class="vertical-dots"></span></button><div class="project-menu" data-project="${escapeHtml(p)}"><button type="button" class="project-menu-delete" onclick="event.stopPropagation(); deleteProject(${jsString(p)})">予定を削除する</button></div></div></div>`).join('')}</div>`
+        ? `<div class="project-list-grid">${projects.map(p => `<div class="project-card"><button class="btn project-btn" data-project="${escapeHtml(p)}"><span class="project-card-title">${escapeHtml(p)}</span>${renderProjectDateChips(p)}</button><div class="project-menu-wrap"><button type="button" class="project-menu-btn" onclick="toggleProjectMenu(event)" aria-label="予定メニュー"><span class="vertical-dots"></span></button><div class="project-menu" data-project="${escapeHtml(p)}"><button type="button" class="project-menu-delete" onclick="event.stopPropagation(); deleteProject(${jsString(p)})">予定を削除する</button></div></div></div>`).join('')}</div>`
         : 'まだプロジェクトがありません。';
       document.querySelectorAll('.project-btn').forEach(btn => {
         btn.addEventListener('click', () => enterProject(btn.dataset.project));
