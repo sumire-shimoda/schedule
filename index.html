@@ -1279,6 +1279,33 @@
       }
     }
 
+
+    /* v9.9: スマホ用 共有/削除ボタンをさらに小型化 */
+    @media (max-width: 640px) {
+      .project-share-btn,
+      .project-delete-btn-inline {
+        right: 8px !important;
+        min-width: 44px !important;
+        height: 24px !important;
+        padding: 0 8px !important;
+        font-size: 10px !important;
+        line-height: 1 !important;
+        border-radius: 999px !important;
+      }
+
+      .project-share-btn {
+        top: 8px !important;
+      }
+
+      .project-delete-btn-inline {
+        top: 36px !important;
+      }
+
+      .project-card .project-btn {
+        padding-right: 66px !important;
+      }
+    }
+
   </style>
 </head>
 <body>
