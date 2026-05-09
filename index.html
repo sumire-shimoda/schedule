@@ -723,6 +723,18 @@
       color: #DC2626 !important;
     }
 
+
+    /* v6.2: 共有/削除修正 + 既存予定カード微調整 */
+    .project-card .project-btn {
+      border-color: #4B5563 !important;
+      padding-top: 18px !important;
+      padding-bottom: 20px !important;
+    }
+    .project-card-title,
+    .project-card-dates {
+      transform: translateY(-2px);
+    }
+
   </style>
 </head>
 <body>
@@ -950,20 +962,35 @@
 
   async function deleteProject(name) {
     if (!confirm(`稽古予定「${name}」を削除します。スプレッドシート上のシートも消えます。本当に削除しますか？`)) return;
+
     try {
-      await apiFetch(GAS_URL, {
+      const res = await apiFetch(GAS_URL, {
         method: "POST",
-        body: JSON.stringify({ type: "deleteProject", projectName: name })
+        body: JSON.stringify({
+          type: "deleteProject",
+          action: "deleteProject",
+          projectName: name
+        })
       });
+
+      if (res && res.status && res.status !== "success") {
+        throw new Error(res.message || "削除に失敗しました");
+      }
 
       localStorage.removeItem(`projectSettings:${name}`);
 
       if (currentProject === name) {
-        goHome();
-      } else {
-        await loadProjects();
+        setProjectToUrl("");
+        currentProject = "";
+        appData = { cast: [], scenes: [], schedules: [] };
+        responses = [];
+        document.getElementById('project-title').style.display = "none";
+        document.getElementById('project-title').innerText = "";
+        document.getElementById('page-main').classList.remove('active');
+        document.getElementById('page-select').classList.add('active');
       }
 
+      await loadProjects();
       alert("稽古予定を削除しました。");
     } catch (err) {
       alert('削除に失敗しました。Apps Script側に deleteProject の処理が入っているか確認してください: ' + err.message);
@@ -976,12 +1003,37 @@
     return url.toString();
   }
 
+  function copyTextToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text);
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    textarea.style.top = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+
+    try {
+      const ok = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      return ok ? Promise.resolve() : Promise.reject(new Error('copy failed'));
+    } catch (err) {
+      document.body.removeChild(textarea);
+      return Promise.reject(err);
+    }
+  }
+
   async function shareProject(event, projectName) {
     event.stopPropagation();
     const url = makeProjectShareUrl(projectName);
 
     try {
-      await navigator.clipboard.writeText(url);
+      await copyTextToClipboard(url);
       alert("共有用URLをコピーしました。");
     } catch (err) {
       window.prompt("このURLをコピーしてください。", url);
