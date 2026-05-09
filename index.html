@@ -819,6 +819,90 @@
       accent-color: var(--main);
     }
 
+
+    /* v8.3: 役者タブ見出し余白・提案/スケジュール表示調整・トグル修正 */
+    #view-member > .card h3 {
+      margin-top: 0;
+      margin-bottom: 14px;
+    }
+
+    .proposal-box h3 {
+      display: none !important;
+    }
+
+    .proposal-scene-line {
+      font-size: 15.5px !important;
+      color: var(--text) !important;
+      gap: 11px !important;
+      align-items: center !important;
+      padding: 8px 0 !important;
+    }
+
+    .proposal-scene-line span {
+      color: var(--text) !important;
+      font-weight: 500;
+    }
+
+    .proposal-scene-line input[type="checkbox"] {
+      width: 21px !important;
+      height: 21px !important;
+      min-width: 21px !important;
+      margin-top: 0 !important;
+      accent-color: var(--main);
+    }
+
+    .selected-practice-title {
+      display: none !important;
+    }
+
+    .selected-practice-table {
+      font-size: 15px !important;
+      color: var(--text) !important;
+    }
+
+    .selected-practice-table th,
+    .selected-practice-table td {
+      color: var(--text) !important;
+      font-size: 15px !important;
+      line-height: 1.55;
+    }
+
+    #attendance-table-body {
+      display: none;
+    }
+
+    #attendance-table-body.open {
+      display: block !important;
+      margin-top: 14px;
+    }
+
+    .collapse-toggle.open .collapse-toggle-icon {
+      transform: rotate(45deg);
+      margin-left: 0;
+      margin-top: -3px;
+    }
+
+
+    /* v8.4: 実スケジュール表の列幅調整 */
+    .selected-practice-table {
+      table-layout: fixed;
+      width: 100%;
+    }
+
+    .selected-practice-table th:nth-child(1),
+    .selected-practice-table td:nth-child(1) {
+      width: 92px;
+      white-space: nowrap;
+    }
+
+    .selected-practice-table th:nth-child(2),
+    .selected-practice-table td:nth-child(2),
+    .selected-practice-table th:nth-child(3),
+    .selected-practice-table td:nth-child(3) {
+      width: calc((100% - 92px) / 2);
+      word-break: break-word;
+    }
+
   </style>
 </head>
 <body>
@@ -851,7 +935,7 @@
 
     <div id="view-admin" style="display:none;">
       <div class="proposal-box">
-        <h3 style="margin-top:0; color: var(--text);">稽古可能なシーンの提案</h3>
+        
         <div id="proposal-list">回答を読み込み中...</div>
         <div id="selected-practice-schedule" class="selected-practice-box"></div>
       </div>
@@ -1722,7 +1806,6 @@
     `).join('');
 
     div.innerHTML = `
-      <h4 class="selected-practice-title">実スケジュール</h4>
       <div class="table-wrap">
         <table class="selected-practice-table">
           <thead>
@@ -1823,6 +1906,16 @@
 
     listDiv.innerHTML = html || '<span class="empty-note">必要な役者が揃う日程がありません。</span>';
     renderSelectedPracticeSchedule();
+  }
+
+  function toggleAttendanceTable() {
+    const body = document.getElementById('attendance-table-body');
+    const btn = document.getElementById('attendance-toggle');
+    if (!body || !btn) return;
+
+    const isOpen = !body.classList.contains('open');
+    body.classList.toggle('open', isOpen);
+    btn.classList.toggle('open', isOpen);
   }
 
   function renderCrossTable() {
