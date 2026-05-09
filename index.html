@@ -800,6 +800,25 @@
       font-size: 12px;
     }
 
+
+    /* v8.2: 稽古可能シーンの見やすさ・実スケジュール日程別集約 */
+    .proposal-scene-line {
+      font-size: 14px !important;
+      color: var(--text) !important;
+      gap: 10px !important;
+      align-items: center !important;
+      padding: 7px 0 !important;
+    }
+    .proposal-scene-line span {
+      color: var(--text) !important;
+    }
+    .proposal-scene-line input[type="checkbox"] {
+      width: 18px !important;
+      height: 18px !important;
+      margin-top: 0 !important;
+      accent-color: var(--main);
+    }
+
   </style>
 </head>
 <body>
@@ -1669,12 +1688,36 @@
       return;
     }
 
-    const rows = items.map(item => `
+    const grouped = new Map();
+
+    items.forEach(item => {
+      if (!grouped.has(item.date)) {
+        grouped.set(item.date, {
+          date: item.date,
+          scenes: [],
+          members: new Set()
+        });
+      }
+
+      const group = grouped.get(item.date);
+      group.scenes.push(item.scene);
+
+      String(item.members || '')
+        .split('、')
+        .map(m => m.trim())
+        .filter(Boolean)
+        .forEach(m => {
+          // 途中参加の時間表記は実スケジュール表では外し、その日に来る人として重複排除
+          const nameOnly = m.replace(/\([^)]*\)$/g, '').trim();
+          if (nameOnly) group.members.add(nameOnly);
+        });
+    });
+
+    const rows = Array.from(grouped.values()).map(group => `
       <tr>
-        <td>${escapeHtml(formatScheduleDate(item.date))}</td>
-        <td>${escapeHtml(item.time)}</td>
-        <td>${escapeHtml(item.scene)}</td>
-        <td>${escapeHtml(item.members)}</td>
+        <td>${escapeHtml(formatScheduleDate(group.date))}</td>
+        <td>${escapeHtml(group.scenes.join('、'))}</td>
+        <td>${escapeHtml(Array.from(group.members).join('、'))}</td>
       </tr>
     `).join('');
 
@@ -1685,7 +1728,6 @@
           <thead>
             <tr>
               <th>日程</th>
-              <th>時間</th>
               <th>シーン</th>
               <th>参加者</th>
             </tr>
