@@ -1290,6 +1290,65 @@
       }
     }
 
+
+    /* v10.2: 既存予定カードの右中央に×削除ボタン */
+    .project-share-btn {
+      display: none !important;
+    }
+
+    .project-delete-btn-inline {
+      position: absolute !important;
+      top: 50% !important;
+      right: 12px !important;
+      bottom: auto !important;
+      transform: translateY(-50%) !important;
+      width: 24px !important;
+      height: 24px !important;
+      min-width: 24px !important;
+      padding: 0 !important;
+      border: none !important;
+      background: transparent !important;
+      color: var(--muted) !important;
+      font-size: 18px !important;
+      line-height: 1 !important;
+      font-weight: 700 !important;
+      border-radius: 999px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+
+    .project-delete-btn-inline:hover {
+      background: #EEF2F7 !important;
+      color: var(--text) !important;
+    }
+
+    .project-card:hover .project-delete-btn-inline {
+      background: transparent !important;
+    }
+
+    .project-card:hover .project-delete-btn-inline:hover {
+      background: #EEF2F7 !important;
+    }
+
+    .project-card .project-btn {
+      padding-right: 48px !important;
+    }
+
+    @media (max-width: 640px) {
+      .project-delete-btn-inline {
+        right: 10px !important;
+        width: 24px !important;
+        height: 24px !important;
+        min-width: 24px !important;
+        font-size: 18px !important;
+      }
+
+      .project-card .project-btn {
+        padding-right: 44px !important;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -1685,7 +1744,7 @@
   }
 
   async function deleteProject(name) {
-    if (!confirm(`稽古予定「${name}」を削除します。スプレッドシート上のシートも消えます。本当に削除しますか？`)) return;
+    if (!confirm(`稽古予定「${name}」を削除します。本当に削除しますか？`)) return;
     try {
       const result = await apiFetch(GAS_URL, {
         method: "POST",
@@ -1718,19 +1777,11 @@
       const data = await apiFetch(GAS_URL);
       const projects = data.existingProjects || [];
       document.getElementById('project-list').innerHTML = projects.length
-        ? `<div class="project-list-grid">${projects.map(p => `<div class="project-card"><button type="button" class="btn project-btn" data-project="${escapeHtml(p)}"><span class="project-card-title">${escapeHtml(p)}</span>${renderProjectDateChips(p)}</button><button type="button" class="project-action-btn project-share-btn" data-project="${escapeHtml(p)}">共有</button><button type="button" class="project-action-btn project-delete-btn-inline" data-project="${escapeHtml(p)}">削除</button></div>`).join('')}</div>`
+        ? `<div class="project-list-grid">${projects.map(p => `<div class="project-card"><button type="button" class="btn project-btn" data-project="${escapeHtml(p)}"><span class="project-card-title">${escapeHtml(p)}</span>${renderProjectDateChips(p)}</button><button type="button" class="project-action-btn project-delete-btn-inline" data-project="${escapeHtml(p)}" aria-label="稽古予定を削除">×</button></div>`).join('')}</div>`
         : '<span class="empty-note">まだ予定がありません</span>';
 
       document.querySelectorAll('.project-btn').forEach(btn => {
         btn.addEventListener('click', () => enterProject(btn.dataset.project));
-      });
-
-      document.querySelectorAll('.project-share-btn').forEach(btn => {
-        btn.addEventListener('click', (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          shareProject(btn.dataset.project);
-        });
       });
 
       document.querySelectorAll('.project-delete-btn-inline').forEach(btn => {
