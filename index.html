@@ -612,6 +612,30 @@
       font-size: 1.08rem;
     }
 
+
+    /* v7.1: 回答者用URLコピーボタン */
+    .copy-respondent-url-btn {
+      width: 100%;
+      margin-top: 14px;
+      background: var(--bg);
+      color: var(--main);
+      border: 1px solid var(--main);
+      border-radius: 999px;
+      padding: 13px 18px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .copy-respondent-url-btn:hover {
+      background: #EFF6FF;
+    }
+
+
+    /* v7.2: カードhover時に共有/削除ボタンも同色化 */
+    .project-card:hover .project-share-btn,
+    .project-card:hover .project-delete-btn-inline {
+      background: var(--bg) !important;
+    }
+
   </style>
 </head>
 <body>
@@ -676,13 +700,14 @@
         <h3>3. 稽古日程の追加</h3>
         <input type="text" id="date-picker" placeholder="日程を複数選択できます" style="width:100%; padding:8px; box-sizing:border-box;">
         <div style="margin-top:10px;">
-          開始：<input type="time" id="start-time" value="18:00"> 〜
-          終了：<input type="time" id="end-time" value="22:00">
+          開始：<input type="time" id="start-time" value="18:30"> 〜
+          終了：<input type="time" id="end-time" value="21:00">
           <button class="btn btn-sub" onclick="addSchedule()">選択した日程を追加</button>
         </div>
         <div id="admin-schedule-list" style="margin-top:10px;"></div>
       </div>
       <button class="btn btn-main" style="padding:15px; font-size:1.1rem;" onclick="saveAllSettings()">設定を保存</button>
+      <button type="button" class="copy-respondent-url-btn" onclick="copyRespondentUrl()">回答者用のURLをコピー</button>
     </div>
 
     <div id="view-member">
@@ -745,6 +770,55 @@
     return `${h}:${m}`;
   }
 
+
+  function getProjectYear() {
+    const now = new Date();
+    return now.getFullYear();
+  }
+
+  function parseScheduleDate(dateText) {
+    const raw = String(dateText || "").trim();
+    const match = raw.match(/^(\d{1,2})\/(\d{1,2})/);
+    if (!match) return null;
+
+    const year = getProjectYear();
+    const month = Number(match[1]);
+    const day = Number(match[2]);
+    const date = new Date(year, month - 1, day);
+
+    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+      return null;
+    }
+
+    return date;
+  }
+
+  function formatScheduleDate(dateText) {
+    const date = parseScheduleDate(dateText);
+    if (!date) return String(dateText || "");
+
+    const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    return `${mm}/${dd} (${weekdays[date.getDay()]})`;
+  }
+
+  function normalizeScheduleDate(dateText) {
+    const date = parseScheduleDate(dateText);
+    if (!date) return String(dateText || "").trim();
+
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    return `${mm}/${dd}`;
+  }
+
+  function copyRespondentUrl() {
+    const url = makeProjectShareUrl(currentProject);
+    copyTextToClipboard(url)
+      .then(() => alert("回答者用URLをコピーしました。"))
+      .catch(() => window.prompt("自動コピーできなかったため、このURLをコピーしてください。", url));
+  }
+
   function parseAnswer(answer, sched) {
     const raw = String(answer || "");
     if (!raw) return { status: "未回答", start: null, end: null, label: "未回答" };
@@ -798,7 +872,7 @@
 
     const visible = dates
       .slice(0, maxCount)
-      .map(d => `<span class="project-date-chip">${escapeHtml(d)}</span>`)
+      .map(d => `<span class="project-date-chip">${escapeHtml(formatScheduleDate(d))}</span>`)
       .join('');
 
     const rest = dates.length - maxCount;
@@ -945,7 +1019,7 @@
     setProjectToUrl(name);
     currentProject = name;
     document.getElementById('project-title').style.display = "flex";
-    document.getElementById('project-title').innerHTML = `<button type="button" class="project-back-btn" onclick="goHome()" aria-label="ホームに戻る">＜</button><span class="project-title-name">${escapeHtml(name)}</span>`;
+    document.getElementById('project-title').innerHTML = `<button type="button" class="project-back-btn" onclick="goHome()" aria-label="ホームに戻る">←</button><span class="project-title-name">${escapeHtml(name)}</span>`;
     document.getElementById('page-select').classList.remove('active');
     document.getElementById('page-main').classList.add('active');
     try {
@@ -987,8 +1061,6 @@
   }
 
   function removeScene(idx) {
-    const sceneName = appData.scenes[idx]?.name || "このシーン";
-    if (!confirm(`「${sceneName}」を削除しますか？`)) return;
     appData.scenes.splice(idx, 1);
     renderAll();
   }
@@ -1152,18 +1224,16 @@
     if (!raw) return alert('日程を選択してください。');
     if (timeToMin(start) >= timeToMin(end)) return alert('終了時間は開始時間より後にしてください。');
 
-    const dates = raw.split(',').map(d => d.trim()).filter(Boolean);
+    const dates = raw.split(',').map(d => normalizeScheduleDate(d)).filter(Boolean);
     dates.forEach(date => {
-      const exists = appData.schedules.some(s => s.date === date);
+      const exists = appData.schedules.some(s => normalizeScheduleDate(s.date) === date);
       if (!exists) appData.schedules.push({ date, start, end });
     });
     renderAll();
   }
 
   function removeSchedule(idx) {
-    const sched = appData.schedules[idx];
-    if (!sched) return;
-    if (!confirm(`${sched.date} ${sched.start}〜${sched.end} を削除しますか？`)) return;
+    if (!appData.schedules[idx]) return;
     appData.schedules.splice(idx, 1);
     renderAll();
   }
@@ -1270,13 +1340,13 @@
       </div>
     `).join('');
 
-    document.getElementById('admin-schedule-list').innerHTML = appData.schedules.map((s, idx) => `<span class="chip">${escapeHtml(s.date)} ${escapeHtml(s.start)}〜${escapeHtml(s.end)} <button class="chip-delete" onclick="removeSchedule(${idx})" aria-label="日程を削除">×</button></span>`).join('');
+    document.getElementById('admin-schedule-list').innerHTML = appData.schedules.map((s, idx) => `<span class="chip">${escapeHtml(formatScheduleDate(s.date))} ${escapeHtml(s.start)}〜${escapeHtml(s.end)} <button class="chip-delete" onclick="removeSchedule(${idx})" aria-label="日程を削除">×</button></span>`).join('');
 
     document.getElementById('member-select').innerHTML = '<option value="">名前を選択</option>' + appData.cast.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
     document.getElementById('member-select').onchange = fillPreviousAttendance;
     document.getElementById('member-schedule-list').innerHTML = appData.schedules.map((s, idx) => `
       <div class="date-item">
-        <strong>${escapeHtml(s.date)}</strong> <small>(${escapeHtml(s.start)}〜${escapeHtml(s.end)})</small>
+        <strong>${escapeHtml(formatScheduleDate(s.date))}</strong> <small>(${escapeHtml(s.start)}〜${escapeHtml(s.end)})</small>
         <div class="attendance-buttons" id="attendance-buttons-${idx}">
           <input type="radio" name="st-${idx}" value="参加" onchange="onStatusChange(${idx})" style="display:none;">
           <input type="radio" name="st-${idx}" value="不参加" onchange="onStatusChange(${idx})" style="display:none;">
@@ -1340,7 +1410,7 @@
       if (sceneItems.length > 0) {
         html += `
           <div class="proposal-item">
-            <strong>${escapeHtml(sched.date)}</strong> <span class="ok-badge">稽古可能</span><br>
+            <strong>${escapeHtml(formatScheduleDate(sched.date))}</strong> <span class="ok-badge">稽古可能</span><br>
             <small>${sceneItems.join('<br>')}</small>
           </div>`;
       }
@@ -1356,7 +1426,7 @@
       return;
     }
 
-    const header = appData.schedules.map(s => `<th>${escapeHtml(s.date)}<span class="small-note">${escapeHtml(s.start)}〜${escapeHtml(s.end)}</span></th>`).join('');
+    const header = appData.schedules.map(s => `<th>${escapeHtml(formatScheduleDate(s.date))}<span class="small-note">${escapeHtml(s.start)}〜${escapeHtml(s.end)}</span></th>`).join('');
     const rows = appData.cast.map(c => {
       const r = getLatestResponse(c);
       const cells = appData.schedules.map(s => {
@@ -1369,7 +1439,7 @@
       return `<tr><td>${escapeHtml(c)}</td>${cells}</tr>`;
     }).join('');
 
-    div.innerHTML = `<div class="table-wrap"><table class="cross-table"><thead><tr><th>役者名</th>${header}</tr></thead><tbody>${rows}</tbody></table></div>`;
+    div.innerHTML = `<div class="table-wrap"><table class="cross-table"><thead><tr><th></th>${header}</tr></thead><tbody>${rows}</tbody></table></div>`;
   }
 
   async function saveAllSettings() {
