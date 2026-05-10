@@ -1508,6 +1508,14 @@
       line-height: 1.7;
     }
 
+
+    /* v11.7: シーン役者名タップの反応速度改善 */
+    .member-toggle-list .toggle-btn {
+      touch-action: pan-y !important;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
   </style>
 </head>
 <body>
@@ -2268,6 +2276,43 @@
 
 
 
+
+  const sceneMemberPointerState = {
+    active: false,
+    moved: false,
+    startX: 0,
+    startY: 0
+  };
+
+  function onSceneMemberPointerDown(event) {
+    sceneMemberPointerState.active = true;
+    sceneMemberPointerState.moved = false;
+    sceneMemberPointerState.startX = event.clientX || 0;
+    sceneMemberPointerState.startY = event.clientY || 0;
+  }
+
+  function onSceneMemberPointerMove(event) {
+    if (!sceneMemberPointerState.active) return;
+
+    const dx = Math.abs((event.clientX || 0) - sceneMemberPointerState.startX);
+    const dy = Math.abs((event.clientY || 0) - sceneMemberPointerState.startY);
+
+    if (dx > 6 || dy > 6) {
+      sceneMemberPointerState.moved = true;
+    }
+  }
+
+  function onSceneMemberPointerUp(event, sIdx, cIdx, buttonEl) {
+    if (!sceneMemberPointerState.active) return;
+    sceneMemberPointerState.active = false;
+
+    if (sceneMemberPointerState.moved) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    toggleSceneMember(sIdx, cIdx, buttonEl);
+  }
+
   function markPracticeViewsStale() {
     practiceViewsNeedRecalculate = true;
     const btn = document.querySelector('.recalculate-proposals-btn');
@@ -2448,7 +2493,7 @@
         </div>
         <div class="member-toggle-list">
           ${appData.cast.map((c, cIdx) => `
-            <button type="button" class="toggle-btn ${s.members.includes(c) ? 'active' : ''}" onpointerdown="event.preventDefault(); event.stopPropagation();" ontouchstart="event.preventDefault(); event.stopPropagation();" onclick="event.preventDefault(); event.stopPropagation(); toggleSceneMember(${sIdx}, ${cIdx}, this)">${escapeHtml(c)}</button>
+            <button type="button" class="toggle-btn ${s.members.includes(c) ? 'active' : ''}" onpointerdown="onSceneMemberPointerDown(event)" onpointermove="onSceneMemberPointerMove(event)" onpointerup="onSceneMemberPointerUp(event, ${sIdx}, ${cIdx}, this)" onclick="event.preventDefault(); event.stopPropagation();">${escapeHtml(c)}</button>
           `).join('')}
         </div>
       </div>
