@@ -2855,9 +2855,10 @@
       appData.scenes.forEach(scene => {
         if (scene.members.length === 0) return;
 
-        let possibleStart = timeToMin(sched.start);
-        let possibleEnd = timeToMin(sched.end);
         let hasAvailableMember = false;
+        let longestMember = null;
+        let longestDuration = -1;
+
         const memberBadges = [];
         const availableMemberLabels = [];
 
@@ -2874,32 +2875,49 @@
 
           if (available) {
             hasAvailableMember = true;
-            possibleStart = Math.max(possibleStart, parsed.start);
-            possibleEnd = Math.min(possibleEnd, parsed.end);
 
             const detail = parsed.status === "途中"
               ? (parsed.detail || `${minToTime(parsed.start)}〜${minToTime(parsed.end)}`)
               : "";
 
             const label = detail ? `${mName}(${detail})` : mName;
-            memberBadges.push({ name: mName, label, available: true });
+
+            memberBadges.push({
+              name: mName,
+              label,
+              available: true
+            });
+
             availableMemberLabels.push(label);
+
+            const duration = parsed.end - parsed.start;
+
+            if (duration > longestDuration) {
+              longestDuration = duration;
+              longestMember = parsed;
+            }
           } else {
-            memberBadges.push({ name: mName, label: mName, available: false });
+            memberBadges.push({
+              name: mName,
+              label: mName,
+              available: false
+            });
           }
         });
 
-        if (hasAvailableMember) {
-          const hasOverlap = possibleStart < possibleEnd;
-          const timeText = hasOverlap
-            ? `${minToTime(possibleStart)}〜${minToTime(possibleEnd)}`
-            : "共通時間なし";
+        if (hasAvailableMember && longestMember) {
+          const timeText = `${minToTime(longestMember.start)}〜${minToTime(longestMember.end)}`;
 
           const key = makePracticeKey(sched.date, scene.name, timeText);
           validKeys.add(key);
 
-          const isLimitedTime = hasOverlap && (possibleStart !== timeToMin(sched.start) || possibleEnd !== timeToMin(sched.end));
-          const sceneLabel = isLimitedTime ? `${scene.name} (${timeText})` : scene.name;
+          const isLimitedTime =
+            longestMember.start !== timeToMin(sched.start) ||
+            longestMember.end !== timeToMin(sched.end);
+
+          const sceneLabel = isLimitedTime
+            ? `${scene.name} (${timeText})`
+            : scene.name;
 
           const item = {
             date: sched.date,
@@ -2910,11 +2928,10 @@
           };
 
           const checked = selectedPracticeItems.has(key) ? 'checked' : '';
-          const disabled = hasOverlap ? '' : 'disabled';
 
           sceneItems.push(`
             <label class="proposal-scene-line">
-              <input type="checkbox" ${checked} ${disabled} onchange='togglePracticeSelection(${jsString(key)}, ${JSON.stringify(item)})'>
+              <input type="checkbox" ${checked} onchange='togglePracticeSelection(${jsString(key)}, ${JSON.stringify(item)})'>
               <span>${escapeHtml(scene.name)}：${escapeHtml(timeText)}<span class="proposal-member-badges">${renderMemberBadges(memberBadges)}</span></span>
             </label>
           `);
