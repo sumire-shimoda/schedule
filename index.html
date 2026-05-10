@@ -1539,6 +1539,14 @@
       align-items: center;
     }
 
+
+    /* v11.9: 参加不可役者バッジ */
+    .proposal-member-badge.unavailable {
+      background: #CBD5E1;
+      color: #ffffff;
+      font-weight: 700;
+    }
+
   </style>
 </head>
 <body>
@@ -2811,8 +2819,17 @@
   }
 
 
-  function renderMemberBadges(memberText) {
-    return String(memberText || "")
+  function renderMemberBadges(memberItems) {
+    if (Array.isArray(memberItems)) {
+      return memberItems
+        .map(item => {
+          const cls = item.available ? "proposal-member-badge" : "proposal-member-badge unavailable";
+          return `<span class="${cls}">${escapeHtml(item.label || item.name || "")}</span>`;
+        })
+        .join("");
+    }
+
+    return String(memberItems || "")
       .split("、")
       .map(name => name.trim())
       .filter(Boolean)
@@ -2840,35 +2857,48 @@
 
         let possibleStart = timeToMin(sched.start);
         let possibleEnd = timeToMin(sched.end);
-        let ok = true;
-        const availableMembers = [];
+        let hasAvailableMember = false;
+        const memberBadges = [];
+        const availableMemberLabels = [];
 
         scene.members.forEach(mName => {
           const r = getLatestResponse(mName);
           const parsed = parseAnswer(r?.answers?.[sched.date], sched);
-          if (!r || parsed.status === "未回答" || parsed.status === "不参加") {
-            ok = false;
-            return;
-          }
 
-          possibleStart = Math.max(possibleStart, parsed.start);
-          possibleEnd = Math.min(possibleEnd, parsed.end);
+          const available = !!r
+            && parsed.status !== "未回答"
+            && parsed.status !== "不参加"
+            && parsed.start != null
+            && parsed.end != null
+            && parsed.start < parsed.end;
 
-          if (parsed.status === "途中") {
-            const detail = parsed.detail || `${minToTime(parsed.start)}〜${minToTime(parsed.end)}`;
-            availableMembers.push(`${mName}(${detail})`);
+          if (available) {
+            hasAvailableMember = true;
+            possibleStart = Math.max(possibleStart, parsed.start);
+            possibleEnd = Math.min(possibleEnd, parsed.end);
+
+            const detail = parsed.status === "途中"
+              ? (parsed.detail || `${minToTime(parsed.start)}〜${minToTime(parsed.end)}`)
+              : "";
+
+            const label = detail ? `${mName}(${detail})` : mName;
+            memberBadges.push({ name: mName, label, available: true });
+            availableMemberLabels.push(label);
           } else {
-            availableMembers.push(mName);
+            memberBadges.push({ name: mName, label: mName, available: false });
           }
         });
 
-        if (ok && possibleStart < possibleEnd) {
-          const timeText = `${minToTime(possibleStart)}〜${minToTime(possibleEnd)}`;
-          const memberText = availableMembers.join('、');
+        if (hasAvailableMember) {
+          const hasOverlap = possibleStart < possibleEnd;
+          const timeText = hasOverlap
+            ? `${minToTime(possibleStart)}〜${minToTime(possibleEnd)}`
+            : "共通時間なし";
+
           const key = makePracticeKey(sched.date, scene.name, timeText);
           validKeys.add(key);
 
-          const isLimitedTime = possibleStart !== timeToMin(sched.start) || possibleEnd !== timeToMin(sched.end);
+          const isLimitedTime = hasOverlap && (possibleStart !== timeToMin(sched.start) || possibleEnd !== timeToMin(sched.end));
           const sceneLabel = isLimitedTime ? `${scene.name} (${timeText})` : scene.name;
 
           const item = {
@@ -2876,15 +2906,16 @@
             time: timeText,
             scene: sceneLabel,
             rawScene: scene.name,
-            members: memberText
+            members: availableMemberLabels.join('、')
           };
 
           const checked = selectedPracticeItems.has(key) ? 'checked' : '';
+          const disabled = hasOverlap ? '' : 'disabled';
 
           sceneItems.push(`
             <label class="proposal-scene-line">
-              <input type="checkbox" ${checked} onchange='togglePracticeSelection(${jsString(key)}, ${JSON.stringify(item)})'>
-              <span>${escapeHtml(scene.name)}：${escapeHtml(timeText)}<span class="proposal-member-badges">${renderMemberBadges(memberText)}</span></span>
+              <input type="checkbox" ${checked} ${disabled} onchange='togglePracticeSelection(${jsString(key)}, ${JSON.stringify(item)})'>
+              <span>${escapeHtml(scene.name)}：${escapeHtml(timeText)}<span class="proposal-member-badges">${renderMemberBadges(memberBadges)}</span></span>
             </label>
           `);
         }
