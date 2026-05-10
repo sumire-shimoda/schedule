@@ -1516,6 +1516,29 @@
       -webkit-tap-highlight-color: transparent;
     }
 
+
+    /* v11.8: 稽古可能シーン内の役者名バッジ */
+    .proposal-member-badges {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    .proposal-member-badge {
+      background: var(--blue-soft);
+      color: var(--main-dark);
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      border: none;
+      line-height: 1.2;
+      display: inline-flex;
+      align-items: center;
+    }
+
   </style>
 </head>
 <body>
@@ -2787,6 +2810,16 @@
     updatePracticeScheduleSaveButton();
   }
 
+
+  function renderMemberBadges(memberText) {
+    return String(memberText || "")
+      .split("、")
+      .map(name => name.trim())
+      .filter(Boolean)
+      .map(name => `<span class="proposal-member-badge">${escapeHtml(name)}</span>`)
+      .join("");
+  }
+
   function updateProposals() {
     const listDiv = document.getElementById('proposal-list');
     if (responses.length === 0) {
@@ -2851,7 +2884,7 @@
           sceneItems.push(`
             <label class="proposal-scene-line">
               <input type="checkbox" ${checked} onchange='togglePracticeSelection(${jsString(key)}, ${JSON.stringify(item)})'>
-              <span>${escapeHtml(scene.name)}：${escapeHtml(timeText)} / ${escapeHtml(memberText)}</span>
+              <span>${escapeHtml(scene.name)}：${escapeHtml(timeText)}<span class="proposal-member-badges">${renderMemberBadges(memberText)}</span></span>
             </label>
           `);
         }
