@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
-  <title>劇団スケジュール調整サイト</title>
+  <title>劇団調整ポータル Pro - シーン自動判定付</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <style>
     :root {
@@ -1416,10 +1416,31 @@
       box-shadow: none !important;
     }
 
+
+    /* v10.8: 役者登録修正時の画面移動を抑制 */
+    #admin-cast-list .chip,
+    #admin-cast-list .chip-delete {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    #admin-cast-list .chip-delete:focus {
+      outline: none !important;
+      box-shadow: none !important;
+    }
+
+
+    /* v10.9: シーン役者ボタンは部分更新にし、画面ジャンプを防ぐ */
+    .member-toggle-list .toggle-btn {
+      touch-action: manipulation !important;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
   </style>
 </head>
 <body>
-<header class="site-header"><div class="site-header-inner"><div onclick="goHome()" title="プロジェクト選択へ戻る" style="cursor:pointer;"><div class="site-title">劇団スケジュール調整サイト</div></div></div></header>
+<header class="site-header"><div class="site-header-inner"><div onclick="goHome()" title="プロジェクト選択へ戻る" style="cursor:pointer;"><div class="site-title">劇団スケジュール管理</div></div></div></header>
 <div id="loading-overlay"><div class="loader-card"><div class="spinner"></div><div id="loading-text">通信中...</div></div></div>
 
 <div class="container">
@@ -1935,20 +1956,24 @@
   }
 
   function addCast() {
-    const n = document.getElementById('cast-name').value.trim();
-    if (!n) return;
-    if (!appData.cast.includes(n)) appData.cast.push(n);
-    document.getElementById('cast-name').value = "";
-    markSettingsDirty();
-    renderAll();
+    preserveScrollDuring(() => {
+      const n = document.getElementById('cast-name').value.trim();
+      if (!n) return;
+      if (!appData.cast.includes(n)) appData.cast.push(n);
+      document.getElementById('cast-name').value = "";
+      markSettingsDirty();
+      renderAll();
+    });
   }
 
   function removeCast(idx) {
-    const name = appData.cast[idx];
-    appData.cast.splice(idx, 1);
-    appData.scenes.forEach(s => s.members = s.members.filter(m => m !== name));
-    markSettingsDirty();
-    renderAll();
+    preserveScrollDuring(() => {
+      const name = appData.cast[idx];
+      appData.cast.splice(idx, 1);
+      appData.scenes.forEach(s => s.members = s.members.filter(m => m !== name));
+      markSettingsDirty();
+      renderAll();
+    });
   }
 
   function addScene() {
@@ -2132,16 +2157,33 @@
     sceneMemberScrollLockTimer = window.setTimeout(restore, 80);
   }
 
-  function toggleSceneMember(sIdx, cIdx) {
-    preserveScrollDuring(() => {
-      const cName = appData.cast[cIdx];
-      const s = appData.scenes[sIdx];
-      const idx = s.members.indexOf(cName);
-      if (idx > -1) s.members.splice(idx, 1);
-      else s.members.push(cName);
-      markSettingsDirty();
-      renderAll();
-    });
+  function toggleSceneMember(sIdx, cIdx, buttonEl = null) {
+    const cName = appData.cast[cIdx];
+    const s = appData.scenes[sIdx];
+    if (!cName || !s) return;
+
+    const idx = s.members.indexOf(cName);
+    const isNowActive = idx === -1;
+
+    if (idx > -1) s.members.splice(idx, 1);
+    else s.members.push(cName);
+
+    if (buttonEl) {
+      buttonEl.classList.toggle('active', isNowActive);
+    } else {
+      const selector = `.scene-box[data-scene-index="${sIdx}"] .toggle-btn`;
+      const buttons = document.querySelectorAll(selector);
+      const target = buttons[cIdx];
+      if (target) target.classList.toggle('active', isNowActive);
+    }
+
+    markSettingsDirty();
+
+    // 正攻法：シーン登録欄全体を再生成せず、影響を受ける派生表示だけ更新する
+    updateProposals();
+    renderCrossTable();
+    updateAdminButtonStates();
+    updatePracticeScheduleSaveButton();
   }
 
   function addSchedule() {
@@ -2266,7 +2308,7 @@
 
   function renderAll() {
     document.getElementById('admin-cast-list').innerHTML = appData.cast.length
-      ? appData.cast.map((c, idx) => `<span class="chip">${escapeHtml(c)} <button class="chip-delete" onclick="removeCast(${idx})" aria-label="役者を削除">×</button></span>`).join('')
+      ? appData.cast.map((c, idx) => `<span class="chip">${escapeHtml(c)} <button class="chip-delete" onclick="event.preventDefault(); event.stopPropagation(); removeCast(${idx})" aria-label="役者を削除">×</button></span>`).join('')
       : '';
 
     document.getElementById('admin-scene-list').innerHTML = appData.scenes.map((s, sIdx) => `
@@ -2282,7 +2324,7 @@
         </div>
         <div class="member-toggle-list">
           ${appData.cast.map((c, cIdx) => `
-            <button type="button" class="toggle-btn ${s.members.includes(c) ? 'active' : ''}" onpointerdown="event.preventDefault(); event.stopPropagation();" onclick="event.preventDefault(); event.stopPropagation(); toggleSceneMember(${sIdx}, ${cIdx})">${escapeHtml(c)}</button>
+            <button type="button" class="toggle-btn ${s.members.includes(c) ? 'active' : ''}" onpointerdown="event.preventDefault(); event.stopPropagation();" onclick="event.preventDefault(); event.stopPropagation(); toggleSceneMember(${sIdx}, ${cIdx}, this)">${escapeHtml(c)}</button>
           `).join('')}
         </div>
       </div>
