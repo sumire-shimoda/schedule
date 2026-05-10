@@ -1461,11 +1461,58 @@
       backface-visibility: hidden;
     }
 
+
+    /* v11.4: 役者名タップ時のスクロール補正を安定化 */
+    #proposal-list,
+    #selected-practice-schedule,
+    #attendance-cross-table,
+    #view-admin {
+      overflow-anchor: none;
+    }
+
+    .member-toggle-list .toggle-btn {
+      touch-action: manipulation !important;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+      outline: none !important;
+    }
+
+    .member-toggle-list .toggle-btn:focus {
+      outline: none !important;
+      box-shadow: none !important;
+    }
+
+
+    /* v11.5: 稽古可能シーンの手動更新 */
+    .recalculate-proposals-btn {
+      width: 100%;
+      margin: 12px 0 10px;
+      background: #ffffff;
+      color: var(--main);
+      border: 1px solid var(--main);
+      border-radius: 999px;
+      padding: 12px 18px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .recalculate-proposals-btn:hover {
+      background: #DBEAFE;
+    }
+
+    .recalculate-note {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
   </style>
 </head>
 <body>
 <header class="site-header"><div class="site-header-inner"><div onclick="goHome()" title="プロジェクト選択へ戻る" style="cursor:pointer;"><div class="site-title">劇団スケジュール調整サイト</div></div></div></header>
-<div id="loading-overlay"><div class="loader-card"><div class="spinner"></div><div id="loading-text">通信中...</div></div></div><div id="loading-text">通信中...</div></div></div>
+<div id="loading-overlay"><div class="loader-card"><div class="spinner"></div><div id="loading-text">通信中...</div></div></div>
 
 <div class="container">
   <h1 id="project-title" style="display:none; margin:0 0 16px;"></h1>
@@ -1496,6 +1543,8 @@
         
         <h3 class="practice-section-title">稽古可能なシーン</h3>
         <p class="practice-section-note">日ごとに練習したいシーンを選んでください。チェックしたシーンが稽古スケジュール表に反映されます。</p>
+        <button type="button" class="recalculate-proposals-btn" onclick="recalculatePracticeViews()">稽古可能シーンを更新</button>
+        <p class="recalculate-note">シーン登録で役者を選び直した後は、このボタンを押すと提案と表に反映されます。</p>
         <div id="proposal-list">回答を読み込み中...</div>
         <div id="selected-practice-schedule" class="selected-practice-box"></div>
         <button type="button" id="save-practice-schedule-btn" class="save-practice-schedule-btn" onclick="savePracticeSchedule()" disabled>スケジュールを保存</button>
@@ -1572,6 +1621,7 @@
   let memberLastSubmittedSignature = "";
   const selectedPracticeItems = new Map();
   let savedPracticeScheduleSignature = "";
+  let practiceViewsNeedRecalculate = false;
 
   flatpickr("#date-picker", { mode: "multiple", dateFormat: "m/d" });
 
@@ -2183,31 +2233,53 @@
 
 
   function preserveElementViewportPosition(element, callback) {
-    const beforeTop = element ? element.getBoundingClientRect().top : null;
+    const beforeTop = element && document.body.contains(element) ? element.getBoundingClientRect().top : null;
+    const beforeLeft = element && document.body.contains(element) ? element.getBoundingClientRect().left : null;
     const beforeScrollX = window.scrollX;
     const beforeScrollY = window.scrollY;
 
+    const active = document.activeElement;
+    if (active && typeof active.blur === "function") active.blur();
+
     callback();
 
-    if (!element || beforeTop === null) return;
-
     const restore = () => {
-      if (!document.body.contains(element)) {
+      if (!element || !document.body.contains(element) || beforeTop === null) {
         window.scrollTo({ left: beforeScrollX, top: beforeScrollY, behavior: "auto" });
         return;
       }
 
       const afterTop = element.getBoundingClientRect().top;
-      const delta = afterTop - beforeTop;
+      const afterLeft = element.getBoundingClientRect().left;
+      const deltaY = afterTop - beforeTop;
+      const deltaX = afterLeft - beforeLeft;
 
-      if (Math.abs(delta) > 0.5) {
-        window.scrollBy({ left: 0, top: delta, behavior: "auto" });
+      if (Math.abs(deltaY) > 0.5 || Math.abs(deltaX) > 0.5) {
+        window.scrollBy({ left: deltaX, top: deltaY, behavior: "auto" });
       }
     };
 
+    // DOM更新直後に即補正し、Safariの遅延補正にも追従する
     restore();
     requestAnimationFrame(restore);
+    setTimeout(restore, 0);
     setTimeout(restore, 80);
+  }
+
+
+
+  function markPracticeViewsStale() {
+    practiceViewsNeedRecalculate = true;
+    const btn = document.querySelector('.recalculate-proposals-btn');
+    if (btn) btn.textContent = '稽古可能シーンを更新';
+  }
+
+  function recalculatePracticeViews() {
+    updateProposals();
+    renderCrossTable();
+    updateAdminButtonStates();
+    updatePracticeScheduleSaveButton();
+    practiceViewsNeedRecalculate = false;
   }
 
   function toggleSceneMember(sIdx, cIdx, buttonEl = null) {
@@ -2221,7 +2293,6 @@
     if (idx > -1) s.members.splice(idx, 1);
     else s.members.push(cName);
 
-    // まず押したボタンだけ即時更新する。ここではレイアウトを大きく変えない。
     if (buttonEl) {
       buttonEl.classList.toggle('active', isNowActive);
     } else {
@@ -2232,22 +2303,11 @@
     }
 
     markSettingsDirty();
+    updateAdminButtonStates();
 
-    // 画面ジャンプの原因になる上部エリア更新は、スクロール位置を固定したまま非同期で行う
-    const x = window.scrollX;
-    const y = window.scrollY;
-
-    requestAnimationFrame(() => {
-      updateProposals();
-      renderCrossTable();
-      updateAdminButtonStates();
-      updatePracticeScheduleSaveButton();
-
-      // Safariのスクロール補正より後に戻す
-      requestAnimationFrame(() => {
-        window.scrollTo({ left: x, top: y, behavior: "auto" });
-      });
-    });
+    // 画面の高さが変わる提案欄・表はここでは更新しない。
+    // これにより役者名タップ時に一瞬も画面が動かない。
+    markPracticeViewsStale();
   }
 
   function addSchedule() {
@@ -2388,7 +2448,7 @@
         </div>
         <div class="member-toggle-list">
           ${appData.cast.map((c, cIdx) => `
-            <button type="button" class="toggle-btn ${s.members.includes(c) ? 'active' : ''}" onpointerdown="event.preventDefault(); event.stopPropagation();" onclick="event.preventDefault(); event.stopPropagation(); toggleSceneMember(${sIdx}, ${cIdx}, this)">${escapeHtml(c)}</button>
+            <button type="button" class="toggle-btn ${s.members.includes(c) ? 'active' : ''}" onpointerdown="event.preventDefault(); event.stopPropagation();" ontouchstart="event.preventDefault(); event.stopPropagation();" onclick="event.preventDefault(); event.stopPropagation(); toggleSceneMember(${sIdx}, ${cIdx}, this)">${escapeHtml(c)}</button>
           `).join('')}
         </div>
       </div>
@@ -2429,6 +2489,7 @@
     updateAdminButtonStates();
     updateSubmitButtonState();
     updateMemberAnswerVisibility();
+    practiceViewsNeedRecalculate = false;
   }
 
 
