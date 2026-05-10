@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
-  <title>劇団調整ポータル Pro - シーン自動判定付</title>
+  <title>劇団スケジュール調整サイト</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <style>
     :root {
@@ -1404,10 +1404,22 @@
       -webkit-tap-highlight-color: transparent;
     }
 
+
+    /* v10.6: 役者名タップ時の画面移動をさらに抑制 */
+    .toggle-btn {
+      -webkit-tap-highlight-color: transparent;
+      outline: none !important;
+    }
+
+    .toggle-btn:focus {
+      outline: none !important;
+      box-shadow: none !important;
+    }
+
   </style>
 </head>
 <body>
-<header class="site-header"><div class="site-header-inner"><div onclick="goHome()" title="プロジェクト選択へ戻る" style="cursor:pointer;"><div class="site-title">劇団スケジュール管理</div></div></div></header>
+<header class="site-header"><div class="site-header-inner"><div onclick="goHome()" title="プロジェクト選択へ戻る" style="cursor:pointer;"><div class="site-title">劇団スケジュール調整サイト</div></div></div></header>
 <div id="loading-overlay"><div class="loader-card"><div class="spinner"></div><div id="loading-text">通信中...</div></div></div>
 
 <div class="container">
@@ -1583,8 +1595,8 @@
     if (!date) return String(dateText || "");
 
     const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
-    const mm = String(date.getMonth() + 1).padStart(2, "0");
-    const dd = String(date.getDate()).padStart(2, "0");
+    const mm = (date.getMonth() + 1);
+    const dd = date.getDate();
     return `${mm}/${dd} (${weekdays[date.getDay()]})`;
   }
 
@@ -1592,8 +1604,8 @@
     const date = parseScheduleDate(dateText);
     if (!date) return String(dateText || "").trim();
 
-    const mm = String(date.getMonth() + 1).padStart(2, "0");
-    const dd = String(date.getDate()).padStart(2, "0");
+    const mm = (date.getMonth() + 1);
+    const dd = date.getDate();
     return `${mm}/${dd}`;
   }
 
@@ -2100,16 +2112,36 @@
     renderAll();
   }
 
+
+  let sceneMemberScrollLockTimer = null;
+
+  function preserveScrollDuring(callback) {
+    const x = window.scrollX;
+    const y = window.scrollY;
+
+    const active = document.activeElement;
+    if (active && typeof active.blur === "function") active.blur();
+
+    callback();
+
+    window.clearTimeout(sceneMemberScrollLockTimer);
+
+    const restore = () => window.scrollTo({ left: x, top: y, behavior: "auto" });
+    restore();
+    requestAnimationFrame(restore);
+    sceneMemberScrollLockTimer = window.setTimeout(restore, 80);
+  }
+
   function toggleSceneMember(sIdx, cIdx) {
-    const scrollY = window.scrollY;
-    const cName = appData.cast[cIdx];
-    const s = appData.scenes[sIdx];
-    const idx = s.members.indexOf(cName);
-    if (idx > -1) s.members.splice(idx, 1);
-    else s.members.push(cName);
-    markSettingsDirty();
-    renderAll();
-    requestAnimationFrame(() => window.scrollTo({ top: scrollY, left: 0, behavior: "auto" }));
+    preserveScrollDuring(() => {
+      const cName = appData.cast[cIdx];
+      const s = appData.scenes[sIdx];
+      const idx = s.members.indexOf(cName);
+      if (idx > -1) s.members.splice(idx, 1);
+      else s.members.push(cName);
+      markSettingsDirty();
+      renderAll();
+    });
   }
 
   function addSchedule() {
@@ -2250,7 +2282,7 @@
         </div>
         <div class="member-toggle-list">
           ${appData.cast.map((c, cIdx) => `
-            <button type="button" class="toggle-btn ${s.members.includes(c) ? 'active' : ''}" onclick="event.preventDefault(); event.stopPropagation(); toggleSceneMember(${sIdx}, ${cIdx})">${escapeHtml(c)}</button>
+            <button type="button" class="toggle-btn ${s.members.includes(c) ? 'active' : ''}" onpointerdown="event.preventDefault(); event.stopPropagation();" onclick="event.preventDefault(); event.stopPropagation(); toggleSceneMember(${sIdx}, ${cIdx})">${escapeHtml(c)}</button>
           `).join('')}
         </div>
       </div>
@@ -2699,11 +2731,15 @@
       const updated = { name, answers, memo: "", timestamp: new Date().toISOString() };
       if (idx >= 0) responses[idx] = updated;
       else responses.push(updated);
+      const submitScrollX = window.scrollX;
+      const submitScrollY = window.scrollY;
       renderAll();
       document.getElementById('member-select').value = name;
+      updateMemberAnswerVisibility();
       fillPreviousAttendance();
       memberLastSubmittedSignature = getCurrentAttendanceSignature();
       updateSubmitButtonState();
+      requestAnimationFrame(() => window.scrollTo({ left: submitScrollX, top: submitScrollY, behavior: "auto" }));
       alert("送信完了！");
     } catch (err) {
       alert('送信に失敗しました: ' + err.message);
