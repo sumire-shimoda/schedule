@@ -1384,6 +1384,26 @@
       color: var(--muted-light);
     }
 
+
+    /* v10.5: シーン登録のスクロール・タップ安定化 */
+    .scene-box {
+      touch-action: pan-y !important;
+    }
+
+    .member-toggle-list,
+    .toggle-btn {
+      touch-action: pan-y !important;
+    }
+
+    .drag-handle,
+    .drag-handle * {
+      touch-action: none !important;
+    }
+
+    .toggle-btn {
+      -webkit-tap-highlight-color: transparent;
+    }
+
   </style>
 </head>
 <body>
@@ -2081,6 +2101,7 @@
   }
 
   function toggleSceneMember(sIdx, cIdx) {
+    const scrollY = window.scrollY;
     const cName = appData.cast[cIdx];
     const s = appData.scenes[sIdx];
     const idx = s.members.indexOf(cName);
@@ -2088,6 +2109,7 @@
     else s.members.push(cName);
     markSettingsDirty();
     renderAll();
+    requestAnimationFrame(() => window.scrollTo({ top: scrollY, left: 0, behavior: "auto" }));
   }
 
   function addSchedule() {
@@ -2228,7 +2250,7 @@
         </div>
         <div class="member-toggle-list">
           ${appData.cast.map((c, cIdx) => `
-            <button type="button" class="toggle-btn ${s.members.includes(c) ? 'active' : ''}" onclick="toggleSceneMember(${sIdx}, ${cIdx})">${escapeHtml(c)}</button>
+            <button type="button" class="toggle-btn ${s.members.includes(c) ? 'active' : ''}" onclick="event.preventDefault(); event.stopPropagation(); toggleSceneMember(${sIdx}, ${cIdx})">${escapeHtml(c)}</button>
           `).join('')}
         </div>
       </div>
@@ -2569,10 +2591,14 @@
           const key = makePracticeKey(sched.date, scene.name, timeText);
           validKeys.add(key);
 
+          const isLimitedTime = possibleStart !== timeToMin(sched.start) || possibleEnd !== timeToMin(sched.end);
+          const sceneLabel = isLimitedTime ? `${scene.name} (${timeText})` : scene.name;
+
           const item = {
             date: sched.date,
             time: timeText,
-            scene: scene.name,
+            scene: sceneLabel,
+            rawScene: scene.name,
             members: memberText
           };
 
