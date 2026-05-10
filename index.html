@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
-  <title>劇団調整ポータル Pro - シーン自動判定付</title>
+  <title>劇団スケジュール調整サイト</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <style>
     :root {
@@ -1437,10 +1437,22 @@
       -webkit-user-select: none;
     }
 
+
+    /* v11.0: 中央付近のシーンカードで起きるスクロール補正を抑制 */
+    #proposal-list,
+    #selected-practice-schedule,
+    #attendance-cross-table {
+      overflow-anchor: none;
+    }
+
+    #admin-scene-list {
+      overflow-anchor: auto;
+    }
+
   </style>
 </head>
 <body>
-<header class="site-header"><div class="site-header-inner"><div onclick="goHome()" title="プロジェクト選択へ戻る" style="cursor:pointer;"><div class="site-title">劇団スケジュール管理</div></div></div></header>
+<header class="site-header"><div class="site-header-inner"><div onclick="goHome()" title="プロジェクト選択へ戻る" style="cursor:pointer;"><div class="site-title">劇団スケジュール調整サイト</div></div></div></header>
 <div id="loading-overlay"><div class="loader-card"><div class="spinner"></div><div id="loading-text">通信中...</div></div></div>
 
 <div class="container">
@@ -2157,33 +2169,64 @@
     sceneMemberScrollLockTimer = window.setTimeout(restore, 80);
   }
 
+
+  function preserveElementViewportPosition(element, callback) {
+    const beforeTop = element ? element.getBoundingClientRect().top : null;
+    const beforeScrollX = window.scrollX;
+    const beforeScrollY = window.scrollY;
+
+    callback();
+
+    if (!element || beforeTop === null) return;
+
+    const restore = () => {
+      if (!document.body.contains(element)) {
+        window.scrollTo({ left: beforeScrollX, top: beforeScrollY, behavior: "auto" });
+        return;
+      }
+
+      const afterTop = element.getBoundingClientRect().top;
+      const delta = afterTop - beforeTop;
+
+      if (Math.abs(delta) > 0.5) {
+        window.scrollBy({ left: 0, top: delta, behavior: "auto" });
+      }
+    };
+
+    restore();
+    requestAnimationFrame(restore);
+    setTimeout(restore, 80);
+  }
+
   function toggleSceneMember(sIdx, cIdx, buttonEl = null) {
-    const cName = appData.cast[cIdx];
-    const s = appData.scenes[sIdx];
-    if (!cName || !s) return;
+    preserveElementViewportPosition(buttonEl, () => {
+      const cName = appData.cast[cIdx];
+      const s = appData.scenes[sIdx];
+      if (!cName || !s) return;
 
-    const idx = s.members.indexOf(cName);
-    const isNowActive = idx === -1;
+      const idx = s.members.indexOf(cName);
+      const isNowActive = idx === -1;
 
-    if (idx > -1) s.members.splice(idx, 1);
-    else s.members.push(cName);
+      if (idx > -1) s.members.splice(idx, 1);
+      else s.members.push(cName);
 
-    if (buttonEl) {
-      buttonEl.classList.toggle('active', isNowActive);
-    } else {
-      const selector = `.scene-box[data-scene-index="${sIdx}"] .toggle-btn`;
-      const buttons = document.querySelectorAll(selector);
-      const target = buttons[cIdx];
-      if (target) target.classList.toggle('active', isNowActive);
-    }
+      if (buttonEl) {
+        buttonEl.classList.toggle('active', isNowActive);
+      } else {
+        const selector = `.scene-box[data-scene-index="${sIdx}"] .toggle-btn`;
+        const buttons = document.querySelectorAll(selector);
+        const target = buttons[cIdx];
+        if (target) target.classList.toggle('active', isNowActive);
+      }
 
-    markSettingsDirty();
+      markSettingsDirty();
 
-    // 正攻法：シーン登録欄全体を再生成せず、影響を受ける派生表示だけ更新する
-    updateProposals();
-    renderCrossTable();
-    updateAdminButtonStates();
-    updatePracticeScheduleSaveButton();
+      // 上部の提案欄が伸び縮みしても、押した役者ボタンの画面上の位置を保つ
+      updateProposals();
+      renderCrossTable();
+      updateAdminButtonStates();
+      updatePracticeScheduleSaveButton();
+    });
   }
 
   function addSchedule() {
