@@ -1582,7 +1582,7 @@
         
         <h3 class="practice-section-title">稽古可能なシーン</h3>
         <p class="practice-section-note">日ごとに練習したいシーンを選んでください。チェックしたシーンが稽古スケジュール表に反映されます。</p>
-        <button type="button" class="recalculate-proposals-btn" onclick="recalculatePracticeViews()">稽古可能シーンを更新</button>
+        <button type="button" class="recalculate-proposals-btn" onclick="recalculatePracticeViews()">スケジュールを更新</button>
         <p class="recalculate-note">シーン登録で役者を選び直した後は、このボタンを押すと提案と表に反映されます。</p>
         <div id="proposal-list">回答を読み込み中...</div>
         <div id="selected-practice-schedule" class="selected-practice-box"></div>
@@ -2347,7 +2347,7 @@
   function markPracticeViewsStale() {
     practiceViewsNeedRecalculate = true;
     const btn = document.querySelector('.recalculate-proposals-btn');
-    if (btn) btn.textContent = '稽古可能シーンを更新';
+    if (btn) btn.textContent = 'スケジュールを更新';
   }
 
   function recalculatePracticeViews() {
