@@ -1527,7 +1527,7 @@
     }
 
     .proposal-member-badge {
-      background: var(--main-dark);
+      background: var(--main);
       color: var(--white);
       padding: 3px 9px;
       border-radius: 999px;
@@ -2924,7 +2924,7 @@
       if (sceneItems.length > 0) {
         html += `
           <div class="proposal-item">
-            <strong>${escapeHtml(formatScheduleDate(sched.date))}</strong> <span class="ok-badge">稽古可能</span><br>
+            <strong>${escapeHtml(formatScheduleDate(sched.date))}</strong><br>
             ${sceneItems.join('')}
           </div>`;
       }
