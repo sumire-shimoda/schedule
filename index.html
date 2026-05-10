@@ -1540,9 +1540,18 @@
     }
 
 
+    
+    .proposal-legend {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+
     /* v11.9: 参加不可役者バッジ */
     .proposal-member-badge.unavailable {
-      background: #94A3B8;
+      background: #CBD5E1;
       color: #ffffff;
       font-weight: 700;
     }
@@ -1581,9 +1590,12 @@
       <div class="proposal-box">
         
         <h3 class="practice-section-title">稽古可能なシーン</h3>
-        <p class="practice-section-note">日ごとに練習したいシーンを選んでください。チェックしたシーンが稽古スケジュール表に反映されます。</p>
-        <button type="button" class="recalculate-proposals-btn" onclick="recalculatePracticeViews()">スケジュールを更新</button>
-        <p class="recalculate-note">シーン登録で役者を選び直した後は、このボタンを押すと提案と表に反映されます。</p>
+        <p class="practice-section-note">日ごとに練習したいシーンを選んでください。チェックしたシーンが稽古スケジュール表に反映されます。</p>        
+        <div class="proposal-legend">
+          <span class="proposal-member-badge">参加可能</span>
+          <span class="proposal-member-badge unavailable">参加不可</span>
+        </div>
+
         <div id="proposal-list">回答を読み込み中...</div>
         <div id="selected-practice-schedule" class="selected-practice-box"></div>
         <button type="button" id="save-practice-schedule-btn" class="save-practice-schedule-btn" onclick="savePracticeSchedule()" disabled>スケジュールを保存</button>
@@ -2350,13 +2362,6 @@
     if (btn) btn.textContent = 'スケジュールを更新';
   }
 
-  function recalculatePracticeViews() {
-    updateProposals();
-    renderCrossTable();
-    updateAdminButtonStates();
-    updatePracticeScheduleSaveButton();
-    practiceViewsNeedRecalculate = false;
-  }
 
   function toggleSceneMember(sIdx, cIdx, buttonEl = null) {
     const cName = appData.cast[cIdx];
@@ -2381,9 +2386,8 @@
     markSettingsDirty();
     updateAdminButtonStates();
 
-    // 画面の高さが変わる提案欄・表はここでは更新しない。
-    // これにより役者名タップ時に一瞬も画面が動かない。
-    markPracticeViewsStale();
+    updateProposals();
+    renderCrossTable();
   }
 
   function addSchedule() {
@@ -2603,7 +2607,7 @@
         grouped.set(item.date, {
           date: item.date,
           scenes: [],
-          members: new Set()
+          members: new Map()
         });
       }
 
@@ -2615,9 +2619,18 @@
         .map(m => m.trim())
         .filter(Boolean)
         .forEach(m => {
-          // 途中参加の時間表記は実スケジュール表では外し、その日に来る人として重複排除
-          const nameOnly = m.replace(/\([^)]*\)$/g, '').trim();
-          if (nameOnly) group.members.add(nameOnly);
+          // 途中参加・途中帰宅の人は、実スケジュール表でも「名前 (20:00~21:00)」の形で表示する
+          const match = m.match(/^(.+?)\(([^)]*)\)$/);
+          const name = match ? match[1].trim() : m;
+          const timeDetail = match ? match[2].trim().replace(/〜/g, '~') : '';
+          const displayLabel = timeDetail ? `${name} (${timeDetail})` : name;
+
+          // 同じ日で同じ人が複数シーンに出る場合は重複排除。
+          // 途中参加時間がある表示を優先する。
+          const currentLabel = group.members.get(name);
+          if (!currentLabel || timeDetail) {
+            group.members.set(name, displayLabel);
+          }
         });
     });
 
@@ -2625,7 +2638,7 @@
       <tr>
         <td>${escapeHtml(formatScheduleDate(group.date))}</td>
         <td>${escapeHtml(group.scenes.join('、'))}</td>
-        <td>${escapeHtml(Array.from(group.members).join('、'))}</td>
+        <td>${escapeHtml(Array.from(group.members.values()).join('、'))}</td>
       </tr>
     `).join('');
 
@@ -2646,7 +2659,6 @@
     `;
     updatePracticeScheduleSaveButton();
   }
-
 
   function getPracticeScheduleSignature() {
     return JSON.stringify(Array.from(selectedPracticeItems.entries()));
