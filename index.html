@@ -1449,6 +1449,18 @@
       overflow-anchor: auto;
     }
 
+
+    /* v11.2: 役者名タップ時の一瞬の画面ズレを抑制 */
+    html,
+    body {
+      overflow-anchor: none;
+    }
+
+    .toggle-btn {
+      transform: translateZ(0);
+      backface-visibility: hidden;
+    }
+
   </style>
 </head>
 <body>
@@ -2199,33 +2211,42 @@
   }
 
   function toggleSceneMember(sIdx, cIdx, buttonEl = null) {
-    preserveElementViewportPosition(buttonEl, () => {
-      const cName = appData.cast[cIdx];
-      const s = appData.scenes[sIdx];
-      if (!cName || !s) return;
+    const cName = appData.cast[cIdx];
+    const s = appData.scenes[sIdx];
+    if (!cName || !s) return;
 
-      const idx = s.members.indexOf(cName);
-      const isNowActive = idx === -1;
+    const idx = s.members.indexOf(cName);
+    const isNowActive = idx === -1;
 
-      if (idx > -1) s.members.splice(idx, 1);
-      else s.members.push(cName);
+    if (idx > -1) s.members.splice(idx, 1);
+    else s.members.push(cName);
 
-      if (buttonEl) {
-        buttonEl.classList.toggle('active', isNowActive);
-      } else {
-        const selector = `.scene-box[data-scene-index="${sIdx}"] .toggle-btn`;
-        const buttons = document.querySelectorAll(selector);
-        const target = buttons[cIdx];
-        if (target) target.classList.toggle('active', isNowActive);
-      }
+    // まず押したボタンだけ即時更新する。ここではレイアウトを大きく変えない。
+    if (buttonEl) {
+      buttonEl.classList.toggle('active', isNowActive);
+    } else {
+      const selector = `.scene-box[data-scene-index="${sIdx}"] .toggle-btn`;
+      const buttons = document.querySelectorAll(selector);
+      const target = buttons[cIdx];
+      if (target) target.classList.toggle('active', isNowActive);
+    }
 
-      markSettingsDirty();
+    markSettingsDirty();
 
-      // 上部の提案欄が伸び縮みしても、押した役者ボタンの画面上の位置を保つ
+    // 画面ジャンプの原因になる上部エリア更新は、スクロール位置を固定したまま非同期で行う
+    const x = window.scrollX;
+    const y = window.scrollY;
+
+    requestAnimationFrame(() => {
       updateProposals();
       renderCrossTable();
       updateAdminButtonStates();
       updatePracticeScheduleSaveButton();
+
+      // Safariのスクロール補正より後に戻す
+      requestAnimationFrame(() => {
+        window.scrollTo({ left: x, top: y, behavior: "auto" });
+      });
     });
   }
 
